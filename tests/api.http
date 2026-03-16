@@ -1,0 +1,70 @@
+### Health Check (Root)
+GET http://localhost:8000/ HTTP/1.1
+content-type: application/json
+
+### Health Check (Detailed)
+GET http://localhost:8000/health HTTP/1.1
+content-type: application/json
+
+### List Models
+# Returns "meta-model" plus all available underlying provider models
+GET http://localhost:8000/v1/models HTTP/1.1
+content-type: application/json
+
+### Get Usage Statistics
+# Shows global token and request counts
+GET http://localhost:8000/v1/usage HTTP/1.1
+content-type: application/json
+
+### Chat Completion (Meta-Model)
+# Automatically selects the best available provider/model
+POST http://localhost:8000/v1/chat/completions HTTP/1.1
+content-type: application/json
+
+{
+    "model": "meta-model",
+    "messages": [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What are Medford OR known for?"}
+    ],
+    "temperature": 0.7
+}
+
+### Chat Completion ( Romania Inquiry )
+POST http://localhost:8000/v1/chat/completions HTTP/1.1
+content-type: application/json
+
+{
+    "model": "meta-model",
+    "messages": [
+        {"role": "system", "content": "Format response in JSON."},
+        {"role": "user", "content": "When was the country Romania founded?"}
+    ]
+}
+
+### Specific Model Routing
+# Directly target a specific provider and model
+POST http://localhost:8000/v1/chat/completions HTTP/1.1
+content-type: application/json
+
+{
+    "model": "Mistral/mistral-large-latest",
+    "messages": [
+        {"role": "user", "content": "What is the capital of France?"}
+    ]
+}
+
+### JSON Output Format Hint
+# Injects system instructions to ensure JSON output
+POST http://localhost:8000/v1/chat/completions HTTP/1.1
+content-type: application/json
+
+{
+    "model": "meta-model",
+    "messages": [
+        {"role": "user", "content": "List 3 colors in a JSON array."}
+    ],
+    "response_format": {
+        "type": "json_object"
+    }
+}

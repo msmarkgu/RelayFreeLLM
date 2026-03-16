@@ -1,0 +1,23 @@
+INFO:     Started server process [98911]
+INFO:     Waiting for application startup.
+2026-03-15 17:57:29,006 - __main__ - INFO - === AIModelRouter starting up ===
+2026-03-15 17:57:29,378 - httpx - INFO - HTTP Request: GET https://api.cerebras.ai/v1/tcp_warming "HTTP/2 200 OK"
+2026-03-15 17:57:29,379 - src.provider_registry - INFO - Registered provider: Cerebras
+2026-03-15 17:57:29,380 - src.provider_registry - INFO - Registered provider: Cloudflare
+2026-03-15 17:57:29,380 - src.provider_registry - INFO - Registered provider: DeepSeek
+2026-03-15 17:57:30,774 - src.provider_registry - INFO - Registered provider: Gemini
+2026-03-15 17:57:30,915 - src.provider_registry - INFO - Registered provider: Groq
+2026-03-15 17:57:31,551 - src.provider_registry - INFO - Registered provider: Mistral
+2026-03-15 17:57:31,551 - src.provider_registry - INFO - Auto-discovered 6 providers: ['Cerebras', 'Cloudflare', 'DeepSeek', 'Gemini', 'Groq', 'Mistral']
+2026-03-15 17:57:31,551 - src.model_selector - INFO - Providers: {'Cerebras': <Provider Cerebras>, 'Groq': <Provider Groq>, 'Mistral': <Provider Mistral>, 'Gemini': <Provider Gemini>}
+2026-03-15 17:57:31,552 - src.model_selector - INFO - Provider sequence: ['Cerebras', 'Groq', 'Mistral', 'Gemini'], Provider Strategy: roundrobin, Model Strategy: roundrobin
+2026-03-15 17:57:31,552 - __main__ - INFO - Meta model 'meta-model' ready with providers: ['Cerebras', 'Cloudflare', 'DeepSeek', 'Gemini', 'Groq', 'Mistral']
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:41698 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41710 - "GET /v1/usage HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2026-03-15 17:57:33,863 - __main__ - INFO - === AIModelRouter shutting down ===
+INFO:     Application shutdown complete.
+INFO:     Finished server process [98911]

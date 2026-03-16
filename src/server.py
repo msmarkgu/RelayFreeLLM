@@ -1,0 +1,95 @@
+"""
+AIModelRouter — Meta Model Server
+
+Entry point for the FastAPI application.
+Initializes shared instances (registry, selector, dispatcher) on startup
+and makes them available to routes via app.state.
+"""
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+
+from .config import settings
+from .logging_util import ProjectLogger
+from .model_dispatcher import ModelDispatcher
+from .model_selector import ModelSelector
+from .provider_registry import ProviderRegistry
+from .usage_tracker import UsageTracker
+from .router import api_router
+
+# Configure logging early
+ProjectLogger.configure(
+    project_name="RelayLLMs",
+    log_dir="logs",
+    level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
+)
+logger = ProjectLogger.get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup / shutdown lifecycle for shared state."""
+    logger.info("=== RelayLLMs starting up ===")
+
+    # 1. Auto-discover provider clients
+    registry = ProviderRegistry()
+    registry.auto_discover()
+
+    # 2. Initialize model selector (loads rate limits from JSON)
+    selector = ModelSelector()
+
+    # 3. Initialize usage tracker (persisted stats)
+    usage_tracker = UsageTracker()
+
+    # 4. Create the dispatcher (the meta model core)
+    dispatcher = ModelDispatcher(
+        registry=registry, 
+        selector=selector, 
+        usage_tracker=usage_tracker
+    )
+
+    # Inject into app.state so routes can access them
+    app.state.registry = registry
+    app.state.selector = selector
+    app.state.dispatcher = dispatcher
+    app.state.usage_tracker = usage_tracker
+
+    logger.info(
+        f"Meta model '{settings.META_MODEL_NAME}' ready with providers: "
+        f"{registry.list_providers()}"
+    )
+
+    yield  # app is running
+
+    logger.info("=== RelayLLMs shutting down ===")
+
+
+app = FastAPI(
+    title="RelayLLMs — Meta Model",
+    description="A unified LLM endpoint that transparently routes across multiple AI providers.",
+    version="2.0.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Register routes
+app.include_router(api_router)
+
+
+if __name__ == "__main__":
+    uvicorn.run(
+        app,
+        port=settings.PORT,
+        host=settings.HOST,
+    )

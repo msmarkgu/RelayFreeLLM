@@ -1,0 +1,234 @@
+{
+  "providers": [
+    {
+      "name": "Cerebras",
+      "url": "",
+      "models": [
+        {
+          "name": "qwen-3-235b-a22b-instruct-2507",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 900,
+            "requests_per_day": 14400,
+            "tokens_per_minute": 30000,
+            "tokens_per_hour": 1000000,
+            "tokens_per_day": 1000000
+          },
+          "Max_Context_Length": 65536
+        }
+      ]
+    },
+    {
+      "name": "Groq",
+      "url": "",
+      "models": [
+        {
+          "name": "llama-3.3-70b-versatile",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 1800,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 12000,
+            "tokens_per_hour": 30000,
+            "tokens_per_day": 100000
+          }
+        },
+        {
+          "name": "qwen/qwen3-32b",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 60,
+            "requests_per_hour": 300,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 6000,
+            "tokens_per_hour": 100000,
+            "tokens_per_day": 500000
+          }
+        },
+        {
+          "name": "openai/gpt-oss-20b",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 300,
+            "requests_per_day": 8000,
+            "tokens_per_minute": 12000,
+            "tokens_per_hour": 30000,
+            "tokens_per_day": 100000
+          }
+        },
+        {
+          "name": "openai/gpt-oss-120b",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 300,
+            "requests_per_day": 8000,
+            "tokens_per_minute": 12000,
+            "tokens_per_hour": 30000,
+            "tokens_per_day": 100000
+          }
+        },
+        {
+          "name": "moonshotai/kimi-k2-instruct-0905",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 60,
+            "requests_per_hour": 300,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 10000,
+            "tokens_per_hour": 30000,
+            "tokens_per_day": 300000
+          }
+        },
+        {
+          "name": "moonshotai/kimi-k2-instruct",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 60,
+            "requests_per_hour": 300,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 10000,
+            "tokens_per_hour": 30000,
+            "tokens_per_day": 300000
+          }
+        },
+        {
+          "name": "groq/compound",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 60,
+            "requests_per_day": 250,
+            "tokens_per_minute": 70000,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mistral",
+      "url": "",
+      "models": [
+        {
+          "name": "mistral-large-latest",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        },
+        {
+          "name": "mistral-medium-latest",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        },
+        {
+          "name": "codestral-latest",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        },
+        {
+          "name": "mistral-large-2512",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        },
+        {
+          "name": "mistral-medium-2508",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        },
+        {
+          "name": "mistral-medium-2505",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 300
+          }
+        },
+        {
+          "name": "mistral-medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        },
+        {
+          "name": "codestral-2508",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gemini",
+      "url": "",
+      "models": [
+        {
+          "name": "gemini-2.5-flash",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 60,
+            "requests_per_day": 100,
+            "tokens_per_minute": 250000,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 1000000
+        }
+      ]
+    }
+  ]
+}

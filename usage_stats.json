@@ -1,0 +1,45 @@
+{
+  "providers": {
+    "Cerebras": {
+      "models": {
+        "qwen-3-235b-a22b-instruct-2507": {
+          "prompt_tokens": 6,
+          "completion_tokens": 16,
+          "requests": 1
+        }
+      },
+      "prompt_tokens": 6,
+      "completion_tokens": 16,
+      "requests": 1
+    },
+    "Mistral": {
+      "models": {
+        "mistral-large-latest": {
+          "prompt_tokens": 7,
+          "completion_tokens": 7,
+          "requests": 1
+        }
+      },
+      "prompt_tokens": 7,
+      "completion_tokens": 7,
+      "requests": 1
+    },
+    "Groq": {
+      "models": {
+        "groq/compound": {
+          "prompt_tokens": 9,
+          "completion_tokens": 91,
+          "requests": 1
+        }
+      },
+      "prompt_tokens": 9,
+      "completion_tokens": 91,
+      "requests": 1
+    }
+  },
+  "total": {
+    "prompt_tokens": 22,
+    "completion_tokens": 114,
+    "requests": 3
+  }
+}
