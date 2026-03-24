@@ -20,7 +20,7 @@ from .logging_util import ProjectLogger
 
 CUR_DIR = os.path.dirname(os.path.realpath(__file__))
 CUR_FILE = os.path.basename(__file__)
-TODAY = datetime.datetime.today().strftime('%Y-%m-%d')
+TODAY = datetime.datetime.today().strftime("%Y-%m-%d")
 
 api_router = APIRouter()
 
@@ -33,17 +33,21 @@ logger = ProjectLogger.get_logger(__name__)
 # ── Dependency ──────────────────────────────────────────────────────
 # The dispatcher is injected by server.py via app.state
 
+
 def get_dispatcher(request: Request):
     return request.app.state.dispatcher
 
+
 def get_selector(request: Request):
     return request.app.state.selector
+
 
 def get_usage_tracker(request: Request):
     return request.app.state.usage_tracker
 
 
 # ── Health ──────────────────────────────────────────────────────────
+
 
 @api_router.get("/")
 def health() -> Response:
@@ -53,17 +57,21 @@ def health() -> Response:
 @api_router.get("/health")
 def health_detail() -> JSONResponse:
     """Detailed health check."""
-    return JSONResponse(content={
-        "status": "healthy",
-        "meta_model": settings.META_MODEL_NAME,
-        "providers": get_provider_list_from_state(),
-    }, status_code=200)
+    return JSONResponse(
+        content={
+            "status": "healthy",
+            "meta_model": settings.META_MODEL_NAME,
+            "providers": get_provider_list_from_state(),
+        },
+        status_code=200,
+    )
 
 
 def get_provider_list_from_state():
     """Helper — returns provider list if app state exists."""
     try:
         from .server import app
+
         return app.state.registry.list_providers()
     except Exception:
         return []
@@ -71,18 +79,19 @@ def get_provider_list_from_state():
 
 # ── OpenAI-Compatible Endpoints (Primary) ──────────────────────────
 
+
 @api_router.post("/v1/chat/completions")
 async def chat_completions(request: Request) -> JSONResponse:
     """
     OpenAI-compatible chat completions endpoint.
-    
+
     Users interact with this as if talking to a single AI model.
     The router transparently selects the best available provider.
     """
     try:
         body = await request.json()
         chat_request = ChatCompletionRequest(**body)
-        
+
         dispatcher = get_dispatcher(request)
         result = await dispatcher.chat(chat_request)
 
@@ -90,25 +99,29 @@ async def chat_completions(request: Request) -> JSONResponse:
 
     except Exception as ex:
         logger.error(f"chat_completions error: {ex}\n{traceback.format_exc()}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error: {ex}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error: {ex}")
 
 
 @api_router.get("/v1/models")
-async def list_models_openai(request: Request) -> JSONResponse:
+async def list_models_openai(
+    request: Request,
+    type: str | None = None,
+    scale: str | None = None,
+) -> JSONResponse:
     """
-    OpenAI-compatible model listing.
-    
+    OpenAI-compatible model listing with optional type/scale filtering.
+
+    Query params:
+        type: Filter by model type (text, coding, image, speech, embedding, moderation, ocr)
+        scale: Filter by model scale (large, medium, small)
+
     Returns "meta-model" as the primary model, plus all
     available underlying provider models.
     """
     try:
         selector = get_selector(request)
-        available = selector.get_available_models()
+        available = selector.get_available_models(model_type=type, model_scale=scale)
 
-        # Build OpenAI-compatible model list
         model_list = [
             {
                 "id": settings.META_MODEL_NAME,
@@ -118,26 +131,34 @@ async def list_models_openai(request: Request) -> JSONResponse:
             }
         ]
 
-        # Also list the underlying models for transparency
         statuses = selector.get_model_statuses()
         for provider_info in available.get("models", []):
-            prov_name = provider_info['provider']
+            prov_name = provider_info["provider"]
             for model in provider_info.get("models", []):
-                model_name = model['name']
+                model_name = model["name"]
                 status_info = statuses.get(prov_name, {}).get(model_name, {})
-                
-                model_list.append({
-                    "id": f"{prov_name}/{model_name}",
-                    "object": "model",
-                    "owned_by": prov_name,
-                    "status": status_info.get("status", "available"),
-                    "cooldown_remaining_sec": status_info.get("cooldown_remaining", 0)
-                })
 
-        return JSONResponse(content={
-            "object": "list",
-            "data": model_list,
-        }, status_code=200)
+                model_list.append(
+                    {
+                        "id": f"{prov_name}/{model_name}",
+                        "object": "model",
+                        "owned_by": prov_name,
+                        "type": model.get("type", "text"),
+                        "scale": model.get("scale", "medium"),
+                        "status": status_info.get("status", "available"),
+                        "cooldown_remaining_sec": status_info.get(
+                            "cooldown_remaining", 0
+                        ),
+                    }
+                )
+
+        return JSONResponse(
+            content={
+                "object": "list",
+                "data": model_list,
+            },
+            status_code=200,
+        )
 
     except Exception as ex:
         logger.error(f"list_models error: {ex}\n{traceback.format_exc()}")

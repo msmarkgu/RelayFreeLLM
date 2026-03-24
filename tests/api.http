@@ -60,11 +60,102 @@ POST http://localhost:8000/v1/chat/completions HTTP/1.1
 content-type: application/json
 
 {
-    "model": "meta-model",
-    "messages": [
-        {"role": "user", "content": "List 3 colors in a JSON array."}
-    ],
-    "response_format": {
-        "type": "json_object"
-    }
+  "model": "meta-model",
+  "messages": [
+    {"role": "user", "content": "List 3 colors in a JSON array."}
+  ],
+  "response_format": {
+    "type": "json_object"
+  }
+}
+
+### Filter Models by Type (coding)
+# Returns only coding models across all providers
+GET http://localhost:8000/v1/models?type=coding HTTP/1.1
+content-type: application/json
+
+### Filter Models by Scale (large)
+# Returns only large-scale models (70B+ parameters)
+GET http://localhost:8000/v1/models?scale=large HTTP/1.1
+content-type: application/json
+
+### Filter Models by Type and Scale
+# Returns coding models with medium scale
+GET http://localhost:8000/v1/models?type=coding&scale=medium HTTP/1.1
+content-type: application/json
+
+### Chat Completion with Coding Model
+# Use a coding-optimized model for code generation
+POST http://localhost:8000/v1/chat/completions HTTP/1.1
+content-type: application/json
+
+{
+  "model": "Mistral/codestral-latest",
+  "messages": [
+    {"role": "user", "content": "Write a Python function to merge two sorted lists."}
+  ]
+}
+
+### Chat Completion with Large Model
+# Use a large-scale model for complex reasoning
+POST http://localhost:8000/v1/chat/completions HTTP/1.1
+content-type: application/json
+
+{
+  "model": "Cerebras/qwen-3-235b-a22b-instruct-2507",
+  "messages": [
+    {"role": "user", "content": "Explain the philosophical implications of artificial general intelligence."}
+  ]
+}
+
+### Chat Completion with Medium Model
+# Use a medium-scale model for balanced performance
+POST http://localhost:8000/v1/chat/completions HTTP/1.1
+content-type: application/json
+
+{
+  "model": "Groq/qwen/qwen3-32b",
+  "messages": [
+    {"role": "user", "content": "Summarize the key features of Python 3.12 in 3 bullet points."}
+  ]
+}
+
+### Chat Completion with Type Filter (coding)
+# Auto-select a coding model without specifying exact model name
+POST http://localhost:8000/v1/chat/completions HTTP/1.1
+content-type: application/json
+
+{
+  "model": "meta-model",
+  "model_type": "coding",
+  "messages": [
+    {"role": "user", "content": "Write a Python function to check if a string is a palindrome."}
+  ]
+}
+
+### Chat Completion with Scale Filter (large)
+# Auto-select a large-scale model for complex tasks
+POST http://localhost:8000/v1/chat/completions HTTP/1.1
+content-type: application/json
+
+{
+  "model": "meta-model",
+  "model_scale": "large",
+  "messages": [
+    {"role": "user", "content": "Analyze the economic implications of artificial intelligence on job markets."}
+  ]
+}
+
+### Chat Completion with Type and Scale Filter
+# Auto-select a medium-scale coding model
+POST http://localhost:8000/v1/chat/completions HTTP/1.1
+content-type: application/json
+
+{
+  "model": "meta-model",
+  "model_type": "coding",
+  "model_scale": "medium",
+  "messages": [
+    {"role": "user", "content": "Refactor this code to use list comprehension: squares = []; for i in range(10): squares.append(i**2)"}
+  ]
 }

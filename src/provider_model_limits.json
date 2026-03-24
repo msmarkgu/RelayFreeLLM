@@ -6,6 +6,8 @@
       "models": [
         {
           "name": "qwen-3-235b-a22b-instruct-2507",
+          "type": "text",
+          "scale": "large",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
@@ -25,6 +27,8 @@
       "models": [
         {
           "name": "llama-3.3-70b-versatile",
+          "type": "text",
+          "scale": "large",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
@@ -37,6 +41,8 @@
         },
         {
           "name": "qwen/qwen3-32b",
+          "type": "text",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 60,
@@ -49,6 +55,8 @@
         },
         {
           "name": "openai/gpt-oss-20b",
+          "type": "text",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
@@ -61,6 +69,8 @@
         },
         {
           "name": "openai/gpt-oss-120b",
+          "type": "text",
+          "scale": "large",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
@@ -73,6 +83,8 @@
         },
         {
           "name": "moonshotai/kimi-k2-instruct-0905",
+          "type": "text",
+          "scale": "large",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 60,
@@ -85,6 +97,8 @@
         },
         {
           "name": "moonshotai/kimi-k2-instruct",
+          "type": "text",
+          "scale": "large",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 60,
@@ -97,6 +111,8 @@
         },
         {
           "name": "groq/compound",
+          "type": "text",
+          "scale": "large",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
@@ -115,6 +131,8 @@
       "models": [
         {
           "name": "mistral-large-latest",
+          "type": "text",
+          "scale": "large",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 50,
@@ -127,6 +145,8 @@
         },
         {
           "name": "mistral-medium-latest",
+          "type": "text",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 50,
@@ -139,6 +159,8 @@
         },
         {
           "name": "codestral-latest",
+          "type": "coding",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 50,
@@ -151,6 +173,8 @@
         },
         {
           "name": "mistral-large-2512",
+          "type": "text",
+          "scale": "large",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 50,
@@ -163,6 +187,8 @@
         },
         {
           "name": "mistral-medium-2508",
+          "type": "text",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 50,
@@ -175,6 +201,8 @@
         },
         {
           "name": "mistral-medium-2505",
+          "type": "text",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 50,
@@ -187,6 +215,8 @@
         },
         {
           "name": "mistral-medium",
+          "type": "text",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 50,
@@ -199,6 +229,8 @@
         },
         {
           "name": "codestral-2508",
+          "type": "coding",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 50,
@@ -217,6 +249,8 @@
       "models": [
         {
           "name": "gemini-2.5-flash",
+          "type": "text",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 5,

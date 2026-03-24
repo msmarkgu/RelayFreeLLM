@@ -14,30 +14,41 @@ from pydantic import BaseModel, Field
 
 # ── Request Models ──────────────────────────────────────────────────
 
+
 class ChatMessage(BaseModel):
     """A single message in a chat conversation."""
+
     role: Literal["system", "user", "assistant"]
     content: str
 
 
 class ResponseFormat(BaseModel):
     """Specificies the output format of the model."""
+
     type: Literal["text", "json_object"] = "text"
 
 
 class ChatCompletionRequest(BaseModel):
     """
     OpenAI-compatible chat completion request.
-    
+
     When model is "meta-model" (default), the router automatically
     selects the best available provider and model.
+
+    Optionally, users can specify model_type and/or model_scale to
+    filter the model selection to specific categories.
     """
+
     model: str = "meta-model"
     messages: list[ChatMessage]
     temperature: float = 0.8
     max_tokens: int = 4000
     stream: bool = False
     response_format: Optional[ResponseFormat] = None
+    model_type: Optional[str] = (
+        None  # text, coding, image, speech, embedding, moderation, ocr
+    )
+    model_scale: Optional[str] = None  # large, medium, small
 
     def get_system_prompt(self) -> str:
         """Extract the system prompt from messages, if any."""
@@ -56,8 +67,10 @@ class ChatCompletionRequest(BaseModel):
 
 # ── Response Models ─────────────────────────────────────────────────
 
+
 class MetaInfo(BaseModel):
     """Extension fields showing which provider/model actually handled the request."""
+
     provider: str
     model: str
     latency_ms: float
@@ -66,12 +79,14 @@ class MetaInfo(BaseModel):
 
 class ChoiceMessage(BaseModel):
     """The message content within a choice."""
+
     role: str = "assistant"
     content: str
 
 
 class Choice(BaseModel):
     """A single completion choice."""
+
     index: int = 0
     message: ChoiceMessage
     finish_reason: str = "stop"
@@ -79,6 +94,7 @@ class Choice(BaseModel):
 
 class Usage(BaseModel):
     """Token usage statistics (estimated)."""
+
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
@@ -87,9 +103,10 @@ class Usage(BaseModel):
 class ChatCompletionResponse(BaseModel):
     """
     OpenAI-compatible chat completion response.
-    
+
     Includes a `meta` extension field with provider/model attribution.
     """
+
     id: str = Field(default_factory=lambda: f"chatcmpl-{uuid.uuid4().hex[:12]}")
     object: str = "chat.completion"
     created: int = Field(default_factory=lambda: int(time.time()))
@@ -100,6 +117,7 @@ class ChatCompletionResponse(BaseModel):
 
 
 # ── Helper Factories ────────────────────────────────────────────────
+
 
 def build_response(
     content: str,

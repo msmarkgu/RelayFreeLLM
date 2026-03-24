@@ -28,8 +28,12 @@ from .logging_util import ProjectLogger
 
 
 class ModelDispatcher:
-
-    def __init__(self, registry: ProviderRegistry, selector: ModelSelector, usage_tracker: object = None):
+    def __init__(
+        self,
+        registry: ProviderRegistry,
+        selector: ModelSelector,
+        usage_tracker: object = None,
+    ):
         self.registry = registry
         self.selector = selector
         self.usage_tracker = usage_tracker
@@ -50,9 +54,11 @@ class ModelDispatcher:
     async def chat(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
         """
         The meta model's main entry point.
-        
+
         Users call this as if talking to one model. Internally we select
         a provider, call it, and retry on failure with a different provider.
+
+        Supports filtering by model_type and model_scale when model is "meta-model".
         """
         user_prompt = request.get_user_prompt()
         sys_prompt = request.get_system_prompt()
@@ -66,8 +72,10 @@ class ModelDispatcher:
         if "/" in request.model and request.model != "meta-model":
             try:
                 provider_name, model_name = request.model.split("/", 1)
-                self.logger.info(f"Specific routing requested: {provider_name} ({model_name})")
-                
+                self.logger.info(
+                    f"Specific routing requested: {provider_name} ({model_name})"
+                )
+
                 start_time = time.time()
                 model_resp = await self.call_provider_api(
                     provider_name=provider_name,
@@ -82,10 +90,10 @@ class ModelDispatcher:
 
                 if self.usage_tracker:
                     self.usage_tracker.record_usage(
-                        provider_name, 
-                        model_name, 
-                        self.selector.estimate_tokens(user_prompt), 
-                        self.selector.estimate_tokens(model_resp)
+                        provider_name,
+                        model_name,
+                        self.selector.estimate_tokens(user_prompt),
+                        self.selector.estimate_tokens(model_resp),
                     )
 
                 return build_response(
@@ -102,8 +110,7 @@ class ModelDispatcher:
                     attempt=1,
                 )
 
-        # Case 2: Meta Model Routing (Default)
-
+        # Case 2: Meta Model Routing (Default) - with optional type/scale filter
         max_retries = settings.MAX_RETRIES
         attempt = 0
         exclude_providers: list[str] = []
@@ -112,22 +119,32 @@ class ModelDispatcher:
         while attempt < max_retries:
             try:
                 provider_name, model_name, wait_time = self.selector.select(
-                    user_prompt, sys_prompt, exclude_providers=exclude_providers.copy()
+                    user_prompt,
+                    sys_prompt,
+                    exclude_providers=exclude_providers.copy(),
+                    model_type=request.model_type,
+                    model_scale=request.model_scale,
                 )
-                
+
                 if wait_time > 0:
                     if wait_time > settings.MAX_QUOTA_WAIT:
-                        self.logger.warning(f"Wait time {wait_time:.1f}s exceeds MAX_QUOTA_WAIT. Failing.")
+                        self.logger.warning(
+                            f"Wait time {wait_time:.1f}s exceeds MAX_QUOTA_WAIT. Failing."
+                        )
                         return build_error_response(
                             error_message=f"All models are at capacity. Wait time {wait_time:.1f}s exceeds limit.",
-                            attempt=attempt + 1
+                            attempt=attempt + 1,
                         )
-                    
-                    self.logger.info(f"All models busy. Waiting {wait_time:.1f}s before retry...")
+
+                    self.logger.info(
+                        f"All models busy. Waiting {wait_time:.1f}s before retry..."
+                    )
                     await asyncio.sleep(wait_time)
                     continue
 
-                self.logger.info(f"Attempt {attempt + 1}: Selected {provider_name} ({model_name})")
+                self.logger.info(
+                    f"Attempt {attempt + 1}: Selected {provider_name} ({model_name})"
+                )
 
                 start_time = time.time()
                 model_resp = await self.call_provider_api(
@@ -142,10 +159,10 @@ class ModelDispatcher:
 
                 if self.usage_tracker:
                     self.usage_tracker.record_usage(
-                        provider_name, 
-                        model_name, 
-                        self.selector.estimate_tokens(user_prompt), 
-                        self.selector.estimate_tokens(model_resp)
+                        provider_name,
+                        model_name,
+                        self.selector.estimate_tokens(user_prompt),
+                        self.selector.estimate_tokens(model_resp),
                     )
 
                 return build_response(
@@ -157,33 +174,35 @@ class ModelDispatcher:
                 )
 
             except AuthenticationError as e:
-                # Don't retry auth failures — the key won't magically fix itself
                 self.logger.error(f"Auth failure for {e.provider}: {e}")
                 attempt += 1
                 last_error = str(e)
-                if 'provider_name' in locals():
+                if "provider_name" in locals():
                     exclude_providers.append(provider_name)
 
             except (ProviderError, RateLimitError) as e:
                 attempt += 1
                 last_error = str(e)
                 self.logger.warning(f"Attempt {attempt} failed: {last_error}")
-                
-                if 'provider_name' in locals() and 'model_name' in locals():
-                    # Trigger circuit breaker for this model
+
+                if "provider_name" in locals() and "model_name" in locals():
                     cooldown = 60 if isinstance(e, RateLimitError) else 30
-                    self.selector.trigger_circuit_breaker(provider_name, model_name, cooldown)
+                    self.selector.trigger_circuit_breaker(
+                        provider_name, model_name, cooldown
+                    )
                     exclude_providers.append(provider_name)
 
             except Exception as e:
                 attempt += 1
                 last_error = str(e)
                 self.logger.warning(f"Attempt {attempt} unexpected error: {last_error}")
-                if 'provider_name' in locals():
+                if "provider_name" in locals():
                     exclude_providers.append(provider_name)
 
             if attempt >= max_retries:
-                self.logger.error(f"All {max_retries} attempts failed. Last error: {last_error}")
+                self.logger.error(
+                    f"All {max_retries} attempts failed. Last error: {last_error}"
+                )
                 return build_error_response(
                     error_message=f"All retries failed. Last error: {last_error}",
                     attempt=attempt,
@@ -241,7 +260,10 @@ class ModelDispatcher:
         discovered = {}
 
         clients = self.registry.all_clients()
-        tasks = {name: asyncio.create_task(client.list_models()) for name, client in clients.items()}
+        tasks = {
+            name: asyncio.create_task(client.list_models())
+            for name, client in clients.items()
+        }
 
         for name, task in tasks.items():
             try:
