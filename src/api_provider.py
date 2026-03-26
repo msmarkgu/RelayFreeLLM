@@ -22,6 +22,7 @@ class ApiProvider:
         strategy: str = "roundrobin",
         model_type: str | None = None,
         model_scale: str | None = None,
+        model_name: str | None = None,
     ) -> tuple[ApiLimitsTracker | None, float]:
         """
         Try to route request within this provider.
@@ -31,6 +32,7 @@ class ApiProvider:
             strategy: Selection strategy ("random" or "roundrobin")
             model_type: Filter by model type (text, coding, image, speech, etc.)
             model_scale: Filter by model scale (large, medium, small)
+            model_name: Filter by substring of model name
 
         Returns:
             Tuple of (model, wait_time)
@@ -41,6 +43,12 @@ class ApiProvider:
         if model_scale:
             filtered_models = [
                 m for m in filtered_models if m.model_scale == model_scale
+            ]
+        if model_name:
+            filtered_models = [
+                m
+                for m in filtered_models
+                if model_name.lower() in m.model_name.lower()
             ]
 
         if not filtered_models:

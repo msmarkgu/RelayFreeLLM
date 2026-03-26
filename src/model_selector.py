@@ -89,6 +89,7 @@ class ModelSelector:
         exclude_providers: list[str] | None = None,
         model_type: str | None = None,
         model_scale: str | None = None,
+        model_name: str | None = None,
     ) -> tuple[str, str, float]:
         """
         Select a provider's model for the given user input and system prompt.
@@ -152,6 +153,7 @@ class ModelSelector:
                 strategy=self.model_strategy,
                 model_type=model_type,
                 model_scale=model_scale,
+                model_name=model_name,
             )
 
             if model:

@@ -49,6 +49,7 @@ class ChatCompletionRequest(BaseModel):
         None  # text, coding, image, speech, embedding, moderation, ocr
     )
     model_scale: Optional[str] = None  # large, medium, small
+    model_name: Optional[str] = None  # e.g., deepseek, llama
 
     def get_system_prompt(self) -> str:
         """Extract the system prompt from messages, if any."""

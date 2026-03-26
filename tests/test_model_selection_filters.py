@@ -66,3 +66,16 @@ def test_filter_preserves_roundrobin():
 
     # Should have selected models without error
     assert len(results) > 0
+
+
+def test_select_by_model_name():
+    """Test selecting by model name substring."""
+    selector = ModelSelector()
+
+    # Test "llama" - should find something like Llama-3
+    provider, model, wait = selector.select("test prompt", model_name="llama")
+    assert "llama" in model.lower()
+
+    # Test "gemini" - should find something like Gemini-1.5-Flash
+    provider, model, wait = selector.select("test prompt", model_name="gemini")
+    assert "gemini" in model.lower()

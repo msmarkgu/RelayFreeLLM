@@ -131,6 +131,7 @@ class ModelDispatcher:
                     exclude_providers=exclude_providers.copy(),
                     model_type=request.model_type,
                     model_scale=request.model_scale,
+                    model_name=request.model_name,
                 )
 
                 if wait_time > 0:

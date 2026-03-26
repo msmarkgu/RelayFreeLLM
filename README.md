@@ -35,6 +35,10 @@ Don't settle for "blind" routing. Tell the gateway what you need:
     ```json
     {"model": "groq/llama-3", "messages": [...]}
     ```
+*   **By Model Name**: Love a specific model? Just request `deepseek-v3` and the gateway will find a provider for you.
+    ```json
+    {"model": "meta-model", "model_name": "deepseek-v3", "messages": [...]}
+    ```
 
 ### 5. ⚡ Real-Time Streaming (SSE)
 Experience the speed. RelayFreeLLM now supports full OpenAI-compatible **Server-Sent Events (SSE)**, bringing token-by-token streaming to every provider in the stack.
