@@ -1,0 +1,302 @@
+{
+  "providers": [
+    {
+      "name": "Cerebras",
+      "url": "",
+      "models": [
+        {
+          "name": "qwen-3-235b-a22b-instruct-2507",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 900,
+            "requests_per_day": 14400,
+            "tokens_per_minute": 30000,
+            "tokens_per_hour": 1000000,
+            "tokens_per_day": 1000000
+          },
+          "Max_Context_Length": 65536
+        }
+      ]
+    },
+    {
+      "name": "Groq",
+      "url": "",
+      "models": [
+        {
+          "name": "llama-3.3-70b-versatile",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 1800,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 12000,
+            "tokens_per_hour": 30000,
+            "tokens_per_day": 100000
+          }
+        },
+        {
+          "name": "qwen/qwen3-32b",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 60,
+            "requests_per_hour": 300,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 6000,
+            "tokens_per_hour": 100000,
+            "tokens_per_day": 500000
+          }
+        },
+        {
+          "name": "openai/gpt-oss-20b",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 300,
+            "requests_per_day": 8000,
+            "tokens_per_minute": 12000,
+            "tokens_per_hour": 30000,
+            "tokens_per_day": 100000
+          }
+        },
+        {
+          "name": "openai/gpt-oss-120b",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 300,
+            "requests_per_day": 8000,
+            "tokens_per_minute": 12000,
+            "tokens_per_hour": 30000,
+            "tokens_per_day": 100000
+          }
+        },
+        {
+          "name": "moonshotai/kimi-k2-instruct-0905",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 60,
+            "requests_per_hour": 300,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 10000,
+            "tokens_per_hour": 30000,
+            "tokens_per_day": 300000
+          }
+        },
+        {
+          "name": "moonshotai/kimi-k2-instruct",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 60,
+            "requests_per_hour": 300,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 10000,
+            "tokens_per_hour": 30000,
+            "tokens_per_day": 300000
+          }
+        },
+        {
+          "name": "groq/compound",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 60,
+            "requests_per_day": 250,
+            "tokens_per_minute": 70000,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mistral",
+      "url": "",
+      "models": [
+        {
+          "name": "mistral-large-latest",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        },
+        {
+          "name": "mistral-medium-latest",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        },
+        {
+          "name": "codestral-latest",
+          "type": "coding",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        },
+        {
+          "name": "mistral-large-2512",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        },
+        {
+          "name": "mistral-medium-2508",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        },
+        {
+          "name": "mistral-medium-2505",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 300
+          }
+        },
+        {
+          "name": "mistral-medium",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        },
+        {
+          "name": "codestral-2508",
+          "type": "coding",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 50,
+            "requests_per_hour": 3000,
+            "requests_per_day": 60000,
+            "tokens_per_minute": 50000,
+            "tokens_per_hour": 3000000,
+            "tokens_per_day": 30000000
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gemini",
+      "url": "",
+      "models": [
+        {
+          "name": "gemini-2.5-flash",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 60,
+            "requests_per_day": 100,
+            "tokens_per_minute": 250000,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 1000000
+        }
+      ]
+    },
+    {
+      "name": "Ollama",
+      "url": "http://localhost:11434",
+      "models": [
+        {
+          "name": "llama3",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 10,
+            "requests_per_minute": 600,
+            "requests_per_hour": 36000,
+            "requests_per_day": 864000,
+            "tokens_per_minute": 1000000,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          }
+        },
+        {
+          "name": "mistral",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 10,
+            "requests_per_minute": 600,
+            "requests_per_hour": 36000,
+            "requests_per_day": 864000,
+            "tokens_per_minute": 1000000,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          }
+        }
+      ]
+    }
+  ]
+}

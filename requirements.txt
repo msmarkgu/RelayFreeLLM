@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+google-genai
+cerebras_cloud_sdk
+groq
+mistralai
+requests
+python-dotenv
+pydantic
+httpx
