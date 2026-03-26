@@ -23,7 +23,7 @@ from .router import api_router
 
 # Configure logging early
 ProjectLogger.configure(
-    project_name="RelayLLMs",
+    project_name="RelayFreeLLM",
     log_dir="logs",
     level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
 )
@@ -33,7 +33,7 @@ logger = ProjectLogger.get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle for shared state."""
-    logger.info("=== RelayLLMs starting up ===")
+    logger.info("=== RelayFreeLLM starting up ===")
 
     # 1. Auto-discover provider clients
     registry = ProviderRegistry()
@@ -65,11 +65,11 @@ async def lifespan(app: FastAPI):
 
     yield  # app is running
 
-    logger.info("=== RelayLLMs shutting down ===")
+    logger.info("=== RelayFreeLLM shutting down ===")
 
 
 app = FastAPI(
-    title="RelayLLMs — Meta Model",
+    title="RelayFreeLLM — Meta Model",
     description="A unified LLM endpoint that transparently routes across multiple AI providers.",
     version="2.0.0",
     lifespan=lifespan,

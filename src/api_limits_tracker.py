@@ -190,6 +190,10 @@ class ApiLimitsTracker:
         self.deque_tok_min.append((now, num_of_tokens))
         self.deque_tok_hr.append((now, num_of_tokens))
         self.deque_tok_day.append((now, num_of_tokens))
+        
+        self.total_tok_min += num_of_tokens
+        self.total_tok_hr += num_of_tokens
+        self.total_tok_day += num_of_tokens
 
     def __repr__(self) -> str:
         return f"<Provider {self.prvdr_name} Model {self.model_name}>"

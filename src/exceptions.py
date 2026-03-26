@@ -1,5 +1,5 @@
 """
-Typed exception hierarchy for RelayLLMs.
+Typed exception hierarchy for RelayFreeLLM.
 
 Replaces the string-prefix error signaling ("Error: ...") with proper
 exception classes so the dispatcher can make smarter retry decisions.

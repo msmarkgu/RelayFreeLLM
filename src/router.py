@@ -1,5 +1,5 @@
 """
-API routes for the RelayLLMs meta model.
+API routes for the RelayFreeLLM meta model.
 
 Provides an OpenAI-compatible /v1/chat/completions gateway.
 """
@@ -11,6 +11,7 @@ import os
 import traceback
 
 from fastapi import APIRouter, Request, HTTPException
+from fastapi.responses import StreamingResponse
 from starlette.responses import Response, JSONResponse
 from uuid import uuid4
 
@@ -25,7 +26,7 @@ TODAY = datetime.datetime.today().strftime("%Y-%m-%d")
 api_router = APIRouter()
 
 # Configure project-wide logging (only once)
-ProjectLogger.configure(project_name="RelayLLMs", log_dir="logs", level=logging.INFO)
+ProjectLogger.configure(project_name="RelayFreeLLM", log_dir="logs", level=logging.INFO)
 
 logger = ProjectLogger.get_logger(__name__)
 
@@ -80,8 +81,8 @@ def get_provider_list_from_state():
 # ── OpenAI-Compatible Endpoints (Primary) ──────────────────────────
 
 
-@api_router.post("/v1/chat/completions")
-async def chat_completions(request: Request) -> JSONResponse:
+@api_router.post("/v1/chat/completions", response_model=None)
+async def chat_completions(request: Request) -> JSONResponse | StreamingResponse:
     """
     OpenAI-compatible chat completions endpoint.
 
@@ -91,11 +92,38 @@ async def chat_completions(request: Request) -> JSONResponse:
     try:
         body = await request.json()
         chat_request = ChatCompletionRequest(**body)
-
         dispatcher = get_dispatcher(request)
-        result = await dispatcher.chat(chat_request)
 
-        return JSONResponse(content=result.model_dump(), status_code=200)
+        if not chat_request.stream:
+            result = await dispatcher.chat(chat_request)
+            return JSONResponse(content=result.model_dump(), status_code=200)
+
+        # Handle Streaming
+        async def stream_generator():
+            generator = await dispatcher.chat(chat_request)
+            chat_id = f"chatcmpl-{uuid4().hex[:12]}"
+            created = int(datetime.datetime.now().timestamp())
+
+            async for chunk in generator:
+                data = {
+                    "id": chat_id,
+                    "object": "chat.completion.chunk",
+                    "created": created,
+                    "model": chat_request.model,
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {"content": chunk},
+                            "finish_reason": None,
+                        }
+                    ],
+                }
+                yield f"data: {json.dumps(data)}\n\n"
+
+            # Final [DONE] message
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(stream_generator(), media_type="text/event-stream")
 
     except Exception as ex:
         logger.error(f"chat_completions error: {ex}\n{traceback.format_exc()}")

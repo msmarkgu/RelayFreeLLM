@@ -29,32 +29,42 @@ class GeminiClient(ApiInterface):
             self.logger.error(f"Error listing Gemini models: {e}")
             return []
 
-    async def call_model_api(self, 
-                             user_prompt="introduce yourself", 
-                             model="gemini-2.5-pro", 
-                             sys_instruct="return answer in markdown", 
-                             temperature=0.8, 
-                             max_tokens=4000) -> str:
+    async def call_model_api(
+        self,
+        user_prompt: str = "introduce yourself",
+        model: str = "gemini-2.5-pro",
+        sys_instruct: str = "return answer in markdown",
+        temperature: float = 0.8,
+        max_tokens: int = 4000,
+        stream: bool = False,
+    ) -> str | object:
         await asyncio.sleep(1)
 
         try:
+            config = types.GenerateContentConfig(
+                system_instruction=sys_instruct,
+                max_output_tokens=max_tokens,
+                top_k=1,
+                top_p=0.8,
+                temperature=temperature,
+                seed=42,
+                safety_settings=ClientConfig.GEMINI_SAFETY_SETTINGS,
+                tools=[types.Tool(google_search=types.GoogleSearch())],
+            )
+
+            if stream:
+
+                async def generate():
+                    async for response in await self.client.aio.models.generate_content_stream(
+                        model=model, contents=user_prompt, config=config
+                    ):
+                        if response.text:
+                            yield response.text
+
+                return generate()
+
             response = await self.client.aio.models.generate_content(
-                model=model,
-                contents=user_prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=sys_instruct,
-                    max_output_tokens=max_tokens,
-                    top_k=1,
-                    top_p=0.8,
-                    temperature=temperature,
-                    seed=42,
-                    safety_settings=ClientConfig.GEMINI_SAFETY_SETTINGS,
-                    tools=[
-                        types.Tool(
-                            google_search=types.GoogleSearch()
-                        )
-                    ]
-                )
+                model=model, contents=user_prompt, config=config
             )
             return response.text
 

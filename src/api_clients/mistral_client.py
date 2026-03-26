@@ -26,15 +26,37 @@ class MistralClient(ApiInterface):
             self.logger.error(f"Error listing Mistral models: {e}")
             return []
 
-    async def call_model_api(self, 
-                             user_prompt="introduce yourself", 
-                             model="mistral-small-2507", 
-                             sys_instruct="return answer in markdown", 
-                             temperature=0.8, 
-                             max_tokens=4000) -> str:
+    async def call_model_api(
+        self,
+        user_prompt: str = "introduce yourself",
+        model: str = "mistral-small-2507",
+        sys_instruct: str = "return answer in markdown",
+        temperature: float = 0.8,
+        max_tokens: int = 4000,
+        stream: bool = False,
+    ) -> str | object:
         await asyncio.sleep(1)
 
         try:
+            if stream:
+
+                async def generate():
+                    async_stream = await self.client.chat.stream_async(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": sys_instruct},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                    )
+                    async for chunk in async_stream:
+                        content = chunk.data.choices[0].delta.content
+                        if content:
+                            yield content
+
+                return generate()
+
             chat_response = self.client.chat.complete(
                 model=model,
                 messages=[
@@ -55,7 +77,7 @@ class MistralClient(ApiInterface):
                 # Extract text from chunk objects
                 parts = []
                 for chunk in content:
-                    if hasattr(chunk, 'text'):
+                    if hasattr(chunk, "text"):
                         parts.append(chunk.text)
                     elif isinstance(chunk, str):
                         parts.append(chunk)

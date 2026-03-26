@@ -44,6 +44,7 @@ class TestWaitMechanism(unittest.IsolatedAsyncioTestCase):
         
         # 4. Mock Dispatcher/Selector setup
         mock_registry = MagicMock(spec=ProviderRegistry)
+        mock_registry.list_providers.return_value = ["TestProv"]
         mock_client = AsyncMock()
         mock_client.call_model_api.return_value = "Success response"
         mock_registry.get_client.return_value = mock_client
@@ -97,6 +98,7 @@ class TestWaitMechanism(unittest.IsolatedAsyncioTestCase):
         # Max wait is 3600 by default. Let's mock a wait of 4000
         mock_selector = MagicMock(spec=ModelSelector)
         mock_selector.select.return_value = ("TestProv", "", 4000.0)
+        mock_selector.provider_sequence = []
         
         dispatcher = ModelDispatcher(MagicMock(), mock_selector)
         request = ChatCompletionRequest(messages=[ChatMessage(role="user", content="Hello")])

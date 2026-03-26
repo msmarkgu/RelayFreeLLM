@@ -17,7 +17,15 @@ class ApiInterface(ABC):
     PROVIDER_NAME: str = ""
 
     @abstractmethod
-    async def call_model_api(self, user_prompt, model, sys_instruct, temperature, max_tokens) -> str:
+    async def call_model_api(
+        self,
+        user_prompt: str,
+        model: str,
+        sys_instruct: str,
+        temperature: float,
+        max_tokens: int,
+        stream: bool = False,
+    ) -> str | object:  # Union[str, AsyncGenerator[str, None]]
         pass
 
     @abstractmethod

@@ -15,7 +15,7 @@ from src.exceptions import RateLimitError, AuthenticationError
 from src.models import ChatCompletionRequest, ChatMessage
 from src.api_limits_tracker import ApiLimitsTracker
 
-class TestRelayLLMsCore(unittest.IsolatedAsyncioTestCase):
+class TestRelayFreeLLMCore(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         # 1. Create mocks
@@ -35,6 +35,7 @@ class TestRelayLLMsCore(unittest.IsolatedAsyncioTestCase):
         
         # 4. Setup selector default
         self.mock_selector.provider_sequence = ["Gemini", "Groq", "Mistral", "Cerebras"]
+        self.mock_selector.provider_strategy = "roundrobin"
 
     def _get_client_side_effect(self, name):
         mapping = {
@@ -120,7 +121,7 @@ class TestRelayLLMsCore(unittest.IsolatedAsyncioTestCase):
         user_text = "Hello world" # 2 words -> ~2.6 tokens
         sys_text = "Be helpful"   # 2 words -> ~2.6 tokens
         
-        num_tokens = selector.estimate_tokens(user_text) + selector.estimate_tokens(sys_text)
+        num_tokens = selector.estimate_tokens(f"{sys_text}\n\n{user_text}")
         
         # Combined estimation used in select()
         # Mocking select logic for isolated test

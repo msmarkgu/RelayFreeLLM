@@ -263,6 +263,40 @@
           "Max_Context_Length": 1000000
         }
       ]
+    },
+    {
+      "name": "Ollama",
+      "url": "http://localhost:11434",
+      "models": [
+        {
+          "name": "llama3",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 10,
+            "requests_per_minute": 600,
+            "requests_per_hour": 36000,
+            "requests_per_day": 864000,
+            "tokens_per_minute": 1000000,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          }
+        },
+        {
+          "name": "mistral",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 10,
+            "requests_per_minute": 600,
+            "requests_per_hour": 36000,
+            "requests_per_day": 864000,
+            "tokens_per_minute": 1000000,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          }
+        }
+      ]
     }
   ]
 }

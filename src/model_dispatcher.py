@@ -51,7 +51,9 @@ class ModelDispatcher:
 
     # ── Primary "meta model" entry point (OpenAI-compatible) ────────
 
-    async def chat(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
+    async def chat(
+        self, request: ChatCompletionRequest
+    ) -> ChatCompletionResponse | object:
         """
         The meta model's main entry point.
 
@@ -65,6 +67,7 @@ class ModelDispatcher:
         temperature = request.temperature
         max_tokens = request.max_tokens
         response_format = request.response_format
+        stream = request.stream
 
         self.logger.info(f"chat() — user_prompt: {user_prompt[:80]}...")
 
@@ -85,8 +88,12 @@ class ModelDispatcher:
                     temperature=temperature,
                     max_tokens=max_tokens,
                     response_format=response_format,
+                    stream=stream,
                 )
                 latency_ms = (time.time() - start_time) * 1000
+
+                if stream:
+                    return model_resp  # It's an AsyncGenerator
 
                 if self.usage_tracker:
                     self.usage_tracker.record_usage(
@@ -154,8 +161,12 @@ class ModelDispatcher:
                     system_prompt=sys_prompt,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    stream=stream,
                 )
                 latency_ms = (time.time() - start_time) * 1000
+
+                if stream:
+                    return model_resp  # It's an AsyncGenerator
 
                 if self.usage_tracker:
                     self.usage_tracker.record_usage(
@@ -224,9 +235,10 @@ class ModelDispatcher:
         temperature: float = None,
         max_tokens: int = None,
         response_format: object = None,
-    ) -> str:
+        stream: bool = False,
+    ) -> str | object:
         """Call a specific provider's model API."""
-        self.logger.info(f"Calling {provider_name} model: {model_name}")
+        self.logger.info(f"Calling {provider_name} model: {model_name} (stream={stream})")
 
         api_client = self.registry.get_client(provider_name)
 
@@ -247,9 +259,11 @@ class ModelDispatcher:
             sys_instruct=full_sys_prompt,
             temperature=temperature or settings.DEFAULT_TEMPERATURE,
             max_tokens=max_tokens or settings.DEFAULT_MAX_TOKENS,
+            stream=stream,
         )
 
-        self.logger.debug(f"Model response:\n{model_resp}")
+        if not stream:
+            self.logger.debug(f"Model response:\n{model_resp}")
         return model_resp
 
     # ── Model discovery ─────────────────────────────────────────────

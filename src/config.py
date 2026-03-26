@@ -1,5 +1,5 @@
 """
-Centralized configuration for RelayLLMs.
+Centralized configuration for RelayFreeLLM.
 
 All settings are loaded from environment variables (with .env file support).
 This replaces the old api_keys.json approach and scattered hardcoded values.
@@ -24,6 +24,7 @@ class Settings:
     DEEPSEEK_APIKEY: str = os.getenv("DEEPSEEK_APIKEY", "")
     CLOUDFLARE_API_TOKEN: str = os.getenv("CLOUDFLARE_API_TOKEN", "")
     CLOUDFLARE_ACCOUNT_ID: str = os.getenv("CLOUDFLARE_ACCOUNT_ID", "")
+    OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
     # --- Server ---
     HOST: str = os.getenv("HOST", "0.0.0.0")

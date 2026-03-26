@@ -1,5 +1,5 @@
 """
-Pydantic models for the RelayLLMs Meta Model.
+Pydantic models for the RelayFreeLLM Meta Model.
 
 Provides OpenAI-compatible request/response types so the router
 can be used as a drop-in replacement for OpenAI's /v1/chat/completions.

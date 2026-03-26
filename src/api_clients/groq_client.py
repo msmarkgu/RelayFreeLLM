@@ -26,29 +26,55 @@ class GroqClient(ApiInterface):
             self.logger.error(f"Error listing Groq models: {e}")
             return []
 
-    async def call_model_api(self, 
-                             user_prompt="introduce yourself", 
-                             model="qwen/qwen3-32b", 
-                             sys_instruct="return answer in markdown", 
-                             temperature=0.8, 
-                             max_tokens=4000) -> str:
+    async def call_model_api(
+        self,
+        user_prompt: str = "introduce yourself",
+        model: str = "qwen/qwen3-32b",
+        sys_instruct: str = "return answer in markdown",
+        temperature: float = 0.8,
+        max_tokens: int = 4000,
+        stream: bool = False,
+    ) -> str | object:
         await asyncio.sleep(1)
 
         try:
+            if stream:
+
+                async def generate():
+                    stream_resp = self.client.chat.completions.create(
+                        messages=[
+                            {"role": "system", "content": sys_instruct},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        model=model,
+                        temperature=temperature,
+                        max_completion_tokens=max_tokens,
+                        stream=True,
+                    )
+                    for chunk in stream_resp:
+                        if chunk.choices and chunk.choices[0].delta.content:
+                            yield chunk.choices[0].delta.content
+
+                return generate()
+
             chat_completion = self.client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": sys_instruct},
                     {"role": "user", "content": user_prompt},
                 ],
                 model=model,
-                temperature=0.5,
+                temperature=temperature,
                 max_completion_tokens=max_tokens,
                 top_p=1,
                 stop=None,
                 stream=False,
             )
 
-            if chat_completion and chat_completion.choices and len(chat_completion.choices) > 0:
+            if (
+                chat_completion
+                and chat_completion.choices
+                and len(chat_completion.choices) > 0
+            ):
                 return chat_completion.choices[0].message.content
             else:
                 raise ProviderError("Groq", "No response from the model.")
