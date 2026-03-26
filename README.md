@@ -27,7 +27,7 @@
 ## 🔥 Key Features
 
 ### 1. 💰 Truly Free — No Credit Card Nor Phone Number Required
-Built for the free-tier economy. Pre-integrated providers—**[Gemini](https://ai.google.dev/)**, **[Groq](https://groq.com/)**, **[Mistral](https://mistral.ai/)**, **[Cerebras](https://cerebras.ai/)**, and **local [Ollama](https://ollama.com/)**—all offer generous free tiers requiring nothing more than an email address to get started.
+Built for the free-tier economy. Pre-integrated providers—**[Gemini](https://ai.google.dev/)**, **[Groq](https://groq.com/)**, **[Mistral](https://mistral.ai/)**, **[Cerebras](https://cerebras.ai/)**, and **local [Ollama](https://ollama.com/)**—as of March 2026, they offer generous free tiers, mostly requiring nothing more than an email address to get started. Note that some providers might change their policy and   require a phone number for verification in future. When that happens, you can simply remove them from the provider list and add new Providers.
 
 ### 2. 🔌 OpenAI-Compatible Drop-In Proxy
 Point any OpenAI SDK, LangChain, LlamaIndex, AutoGPT, or cURL at `http://localhost:8000/v1` and it just works — **no code changes needed** in your existing AI apps.
