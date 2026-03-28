@@ -89,6 +89,11 @@ CEREBRAS_APIKEY=    # cloud.cerebras.ai
 #Best_APIKEY=...
 # OLLMA model you host locally
 #OLLAMA_BASE_URL=http://localhost:11434  # optional
+
+# tell RelayFreeLLM how to choose from providers and provided models.
+# default strategy is roundrobin for both.
+PROVIDER_STRATEGY=roundrobin # pick provider in turn
+MODEL_STRATEGY=random # randomly pick a model of the currently selected provider
 ```
 
 ### 3. Verify connectivity (optional but recommended)
@@ -154,6 +159,9 @@ llm = ChatOpenAI(
 Tell RelayFreeLLM what you need:
 
 ```json
+// "Any model from any providers, RelayFreeLLM will choose one"
+{"model": "meta-model", "messages": [...]}
+
 // "Give me coding model from any providers"
 {"model": "meta-model", "model_type": "coding", "messages": [...]}
 
