@@ -1,157 +1,140 @@
-# 🚀 RelayFreeLLM — Free LLM API Gateway & Load Balancer
+# RelayFreeLLM
 
-> **Zero-cost, OpenAI-compatible LLM proxy.**
-> Aggregate free-tier APIs from Gemini, Groq, Mistral, Cerebras & Ollama into one resilient endpoint.
+> **One endpoint. More free AI than any single provider. Less rate limit headaches.**
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-async-green)](https://fastapi.tiangolo.com)
-[![OpenAI Compatible](https://img.shields.io/badge/OpenAI-compatible-orange)](https://platform.openai.com/docs/api-reference)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+Don't want to pay $~$$$/month to use AI Models? RelayFreeLLM can help. It is an open-source gateway that combines free tier model providers like Gemini, Groq, Mistral, Cerebras, and Ollama into a single OpenAI-compatible API—so you get aggregately more free inference with automatic failover.
 
-**RelayFreeLLM** is an open-source **LLM gateway** and **load balancer** that unifies multiple free-tier AI APIs (Gemini, Groq, Mistral, Cerebras, Ollama, etc.) behind a single **OpenAI-compatible endpoint**. It intelligently routes requests, enforces rate limits, and automatically **retries on quota exhaustion**, giving you a "meta-model" far more resilient than any single free-tier API.
+```
+# Your existing code works. Just change the URL.
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="fake")
+```
 
-**No paid API keys. No Redis. No complex infrastructure.**
-
----
-
-## 💡 Who Is This For?
-
-- **Students & hobbyists** who want GPT-level AI without monthly bills
-- **Indie developers** prototyping apps with LLM backends
-- **AI agent builders** using LangChain, AutoGPT, or OpenAI SDK who need reliable, cost-free inference
-- **Self-hosters** who want to combine a local **Ollama** instance with cloud free tiers for redundancy
-- **Researchers** who need to batch queries across multiple providers to avoid rate limits
+No code changes. No retry logic. No 429 errors breaking your app.
 
 ---
 
-## 🔥 Key Features
+## Why You Need This
 
-### 1. 💰 Truly Free — No Credit Card Nor Phone Number Required
-Built for the free-tier economy. Pre-integrated providers—**[Gemini](https://ai.google.dev/)**, **[Groq](https://groq.com/)**, **[Mistral](https://mistral.ai/)**, **[Cerebras](https://cerebras.ai/)**, and **local [Ollama](https://ollama.com/)**—as of March 2026, they offer generous free tiers, mostly requiring nothing more than an email address to get started. Note that some providers might change their policy and   require a phone number for verification in future. When that happens, you can simply remove them from the provider list and add new Providers.
+### The Free Tier Problem
 
-### 2. 🔌 OpenAI-Compatible Drop-In Proxy
-Point any OpenAI SDK, LangChain, LlamaIndex, AutoGPT, or cURL at `http://localhost:8000/v1` and it just works — **no code changes needed** in your existing AI apps.
+Free AI APIs are powerful—but using them directly is painful:
 
-### 3. ⚖️ Multi-Provider Load Balancing & Automatic Failover
-Talk to one endpoint; get the best available model.
-- **Smart Retries**: If Groq hits a rate limit (429), RelayFreeLLM instantly **relays** the request to Gemini or Mistral. Zero downtime.
-- **Circuit Breakers**: Automatically quarantines unreliable providers to maintain system health.
-- **Round-Robin & Random strategies**: Distribute load evenly or randomly across providers.
+```
+❌ Groq hits rate limit → Your app crashes
+❌ Gemini quota exhausted → User sees error
+❌ Switching providers → Rewrite your integration
+❌ Testing 5 providers → 5 different SDKs to manage
+```
 
-### 4. 🎯 Intent-Based Model Selection
-Don't settle for blind routing. Tell the gateway what you need:
+### The RelayFreeLLM Solution
 
-*   **By Scale**: Request `large` for complex reasoning tasks, `small` for fast cheap responses.
-    ```json
-    {"model": "meta-model", "model_scale": "large", "messages": [...]}
-    ```
-*   **By Type**: Pin to `coding`, `text`, or `ocr` specialization.
-    ```json
-    {"model": "meta-model", "model_type": "coding", "messages": [...]}
-    ```
-*   **By Provider**: Explicitly route to a specific provider and model.
-    ```json
-    {"model": "groq/llama-3", "messages": [...]}
-    ```
-*   **By Model Name**: Request a specific model family (e.g., DeepSeek, Llama, Gemma) and let the gateway find an available provider for it.
-    ```json
-    {"model": "meta-model", "model_name": "deepseek-v3", "messages": [...]}
-    ```
+```
+✅ Gemini fails → Automatically tries Groq
+✅ One provider down → Traffic routes to others
+✅ Same API for everyone → OpenAI-compatible
+✅ More providers = More throughput
+```
 
-### 5. ⚡ Real-Time Streaming (SSE)
-Full **OpenAI-compatible Server-Sent Events (SSE)** streaming — token-by-token output from every provider.
-
-### 6. 📊 Granular Rate Limit Management
-Intelligent, in-memory quota tracking per provider and model across seconds, minutes, hours, and days — preventing bans and maximizing uptime without any external dependencies.
-
-### 7. 🏠 Local AI Support — Ollama Integration
-Combine **local Ollama models** (Llama 3, Mistral, Gemma, DeepSeek-R1, Qwen) with cloud free tiers for a fully private, zero-cost inference stack.
+You get a **meta-model**: a single endpoint that routes to the best available free provider, handles failures automatically, and keeps your app running.
 
 ---
 
-## 🛠 Full Feature List
+## What You Get
 
-| Feature | Details |
-|---|---|
-| **OpenAI API compatibility** | `/v1/chat/completions`, `/v1/models` |
-| **Providers** | Gemini, Groq, Mistral, Cerebras, DeepSeek, Cloudflare AI, Ollama |
-| **Models** | Llama 3, Gemini 2.5, Mistral Large, DeepSeek-V3/R1, Qwen, Codestral, and more |
-| **Load balancing** | Round-robin and random strategies |
-| **Automatic failover** | Retries on 429 / rate limit with next available provider |
-| **Circuit breakers** | Auto-quarantine unreliable providers |
-| **Quota tracking** | Per-model limits: RPS, RPM, RPH, RPD, TPM |
-| **Streaming** | SSE (Server-Sent Events) — token streaming |
-| **Self-hosted LLM** | Ollama integration for local models |
-| **No infra deps** | Pure Python + FastAPI — no Redis, no database |
+| Feature | Why It Matters |
+|---------|----------------|
+| **OpenAI-compatible** | Drop-in for your existing code. LangChain, LlamaIndex, any SDK. |
+| **Any free providers** | Gemini, Groq, Mistral, Cerebras, Ollama, etc. |
+| **Automatic failover** | Provider down? One model hit limits? We try the next one, round-robin or random or by your preferences. Zero downtime. |
+| **Circuit breakers** | Bad provider? Quarantined automatically. |
+| **Rate limit management** | Built-in quota tracking. No external dependencies. |
+| **Real-time streaming** | SSE streaming from every provider. |
+| **Local models** | Mix cloud free tiers with your local Ollama instance. |
 
 ---
 
-## 🚀 Quick Start
+## Who It's For
+
+| User | Use Case |
+|------|----------|
+| **Independent developers** | Ship AI features without a $$$/month API bill |
+| **Students & hobbyists** | GPT-level AI, no need credit card or phone number |
+| **Self-hosters** | Combine Ollama privacy with cloud capacity |
+| **Researchers** | Batch queries across providers for higher throughput |
+
+---
+
+## Quick Start
 
 ### 1. Install
+
 ```bash
 git clone https://github.com/msmarkgu/RelayFreeLLM.git
 cd RelayFreeLLM
 pip install -r requirements.txt
 ```
 
-### 2. Add your free API keys
-Create a `.env` file — get these keys for free:
+### 2. Add free API keys
+
+Create a `.env` file:
+
 ```bash
-GEMINI_APIKEY=your_key      # https://aistudio.google.com/apikey
-GROQ_APIKEY=your_key        # https://console.groq.com/keys
-MISTRAL_APIKEY=your_key     # https://console.mistral.ai/
-CEREBRAS_APIKEY=your_key    # https://cloud.cerebras.ai/
-# Optional:
-DEEPSEEK_APIKEY=your_key
-CLOUDFLARE_API_TOKEN=your_token
-CLOUDFLARE_ACCOUNT_ID=your_account_id
-OLLAMA_BASE_URL=http://localhost:11434   # if you run Ollama locally
+GEMINI_APIKEY=      # ai.google.dev
+GROQ_APIKEY=        # console.groq.com
+MISTRAL_APIKEY=     # console.mistral.ai
+CEREBRAS_APIKEY=    # cloud.cerebras.ai
+# any other providers you have
+#ABC_APIKEY=...
+#XYZ_APIKEY=...
+#Best_APIKEY=...
+# OLLMA model you host locally
+#OLLAMA_BASE_URL=http://localhost:11434  # optional
 ```
 
-### 3. Verify connectivity (optional)
+### 3. Verify connectivity (optional but recommended)
 ```bash
 python -m tests.test_models_availability
 ```
 
-### 4. Start the gateway
+### 4. Start
+
 ```bash
 python -m src.server
 ```
 
-### 5. Use with the OpenAI Python SDK
+### 5. Use it
+
+**Python SDK:**
 ```python
-import openai
+from openai import OpenAI
 
-# Just change base_url — no other code changes needed
-client = openai.OpenAI(base_url="http://localhost:8000/v1", api_key="relay-free")
-
-response = client.chat.completions.create(
-  model="meta-model",  # or "groq/llama-3.3-70b-versatile", or "gemini/gemini-2.5-flash"
-  messages=[
-    {"role": "system", "content": "You are a helpful AI assistant."},
-    {"role": "user", "content": "Explain quantum computing in simple terms."}
-  ],
-  stream=True  # ⚡ Streaming supported!
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="relay-free"
 )
 
-for chunk in response:
-    print(chunk.choices[0].delta.content, end="")
+# Automatic routing - picks the best available
+response = client.chat.completions.create(
+    model="meta-model",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+
+# Or route to specific provider
+response = client.chat.completions.create(
+    model="groq/llama-3.3-70b-versatile",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
 ```
 
-### 6. Use with cURL
+**cURL:**
 ```bash
 curl -X POST http://localhost:8000/v1/chat/completions \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer relay-free" \
-     -d '{
-       "model": "meta-model",
-       "messages": [{"role": "user", "content": "Hello!"}],
-       "stream": true
-     }'
+  -H "Authorization: Bearer relay-free" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "meta-model", "messages": [{"role": "user", "content": "Hi"}]}'
 ```
 
-### 7. Use with LangChain
+**LangChain:**
 ```python
 from langchain_openai import ChatOpenAI
 
@@ -160,126 +143,159 @@ llm = ChatOpenAI(
     api_key="relay-free",
     model="meta-model"
 )
-response = llm.invoke("What is the capital of France?")
 ```
 
 ---
 
-## 📡 API Reference
+## How Routing Works
 
-All endpoints are OpenAI-compatible and served under `http://localhost:8000`.
+### Intent-Based Selection
 
-### `POST /v1/chat/completions`
-The primary inference endpoint. Accepts the same request body as OpenAI's Chat Completions API, plus optional routing hints:
+Tell RelayFreeLLM what you need:
 
-| Field | Type | Description |
-|---|---|---|
-| `model` | `string` | `"meta-model"` (auto-route), or `"provider/model"` for direct routing |
-| `messages` | `array` | Standard OpenAI message array |
-| `stream` | `bool` | Enable SSE streaming (default: `false`) |
-| `model_type` | `string` | Filter by capability: `text`, `coding`, `ocr` |
-| `model_scale` | `string` | Filter by size: `large`, `medium`, `small` |
-| `model_name` | `string` | Route to a model matching this substring (e.g. `"deepseek"`, `"llama"`) |
+```json
+// "Give me coding model from any providers"
+{"model": "meta-model", "model_type": "coding", "messages": [...]}
 
-### `GET /v1/models`
-List all available provider models and their current status.
+// "I prefer small models to run fast, give simple responses"
+{"model": "meta-model", "model_scale": "small", "messages": [...]}
 
-```bash
-# All models
-curl http://localhost:8000/v1/models
+// "I want large models to do most capable reasoning"
+{"model": "meta-model", "model_scale": "large", "messages": [...]}
 
-# Filter by type and scale
-curl "http://localhost:8000/v1/models?type=coding&scale=medium"
+// "I want DeepSeek models if available"
+{"model": "meta-model", "model_name": "deepseek", "messages": [...]}
+
+// "Specific provider/model"
+{"model": "Gemini/gemini-2.5-flash", "messages": [...]}
 ```
 
-Returns each model's `id`, `type`, `scale`, `status` (`available` / `cooldown`), and `cooldown_remaining_sec`.
+### Automatic Failover
+
+When a provider hits a rate limit:
+
+```
+Request → Groq (rate limited)
+       → Circuit breaker activates
+       → Retry → Gemini
+       → Retry → Mistral
+       → Success ✓
+```
+
+---
+
+## API Reference
+
+### `POST /v1/chat/completions`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `model` | string | `"meta-model"` for auto-routing, or `"provider/model"` for direct |
+| `messages` | array | Standard OpenAI message format |
+| `stream` | bool | Enable SSE streaming (default: false) |
+| `model_type` | string | Filter: `text`, `coding`, `ocr` |
+| `model_scale` | string | Filter: `large`, `medium`, `small` |
+| `model_name` | string | Match model name substring |
+
+### `GET /v1/models`
+
+List available models with status:
+
+```bash
+curl http://localhost:8000/v1/models?type=coding&scale=large
+```
 
 ### `GET /v1/usage`
-Retrieve **aggregated token and request usage statistics** across all providers and models — useful for monitoring your free-tier consumption.
+
+Track your aggregated usage:
 
 ```bash
 curl http://localhost:8000/v1/usage
 ```
 
-Example response:
-```json
-{
-  "total": {"prompt_tokens": 12400, "completion_tokens": 8300, "requests": 47},
-  "providers": {
-    "Gemini": {"requests": 20, "prompt_tokens": 5000, "completion_tokens": 3500},
-    "Groq":   {"requests": 27, "prompt_tokens": 7400, "completion_tokens": 4800}
-  }
-}
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│                 Your Application                │
+│         (OpenAI SDK, LangChain, etc.)           │
+└─────────────────────┬───────────────────────────┘
+                      │ OpenAI-compatible API
+┌─────────────────────▼───────────────────────────┐
+│              RelayFreeLLM Gateway               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────┐  │
+│  │   Router    │→ │  Dispatcher │→ │ Selector│  │
+│  │  /v1/chat   │  │  (retries)  │  │ (quota) │  │
+│  └─────────────┘  └─────────────┘  └────┬────┘  │
+└─────────────────────────────────────────┼───────┘
+                                          │
+        ┌──────────┬──────────┬───────────┼──────────┐
+        ▼          ▼          ▼           ▼          ▼
+   ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌───────┐
+   │ Gemini │ │  Groq  │ │ Mistral│ │Cerebras│ │ Ollama│
+   └────────┘ └────────┘ └────────┘ └────────┘ └───────┘
 ```
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
-```text
+```
 RelayFreeLLM/
 ├── src/
-│   ├── api_clients/        # Provider-specific clients (Gemini, Groq, Mistral, etc.)
-│   ├── models.py           # OpenAI-compatible Pydantic request/response models
-│   ├── model_selector.py   # Quota-aware routing & load balancing logic
-│   ├── model_dispatcher.py # Resilience, retry, and circuit breaker engine
-│   ├── router.py           # FastAPI endpoints with SSE streaming support
-│   └── server.py           # Application entry point
-├── tests/                  # Unit and integration test suite
-└── src/provider_model_limits.json  # Provider quota & capability registry
+│   ├── server.py                 # Entry point
+│   ├── router.py                 # API endpoints
+│   ├── model_dispatcher.py       # Retry & circuit breaker logic
+│   ├── model_selector.py         # Quota-aware routing
+│   ├── provider_registry.py      # Auto-discovers providers
+│   ├── models.py                 # Request/response models
+│   └── api_clients/              # Provider implementations
+│       ├── gemini_client.py
+│       ├── groq_client.py
+│       ├── mistral_client.py
+│       └── ...
+├── tests/                        # Unit & integration tests
+└── provider_model_limits.json    # Rate limit configuration
 ```
 
 ---
 
-## 🗺 Roadmap
+## Roadmap
 
-- [ ] Web UI dashboard for live provider status and usage stats
-- [ ] Persistent rate limit state (survive restarts)
+- [ ] Web dashboard for live provider status
+- [ ] Persistent rate limit state
 - [ ] Prompt caching layer
-- [ ] Support for embeddings and image generation routing
-- [ ] Docker image / one-command deploy
+- [ ] Embeddings & image generation routing
+- [ ] One-command Docker deploy
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-Found a new free provider? Want to improve routing logic? **PRs are welcome!**
+Found a new free provider? Adding one takes about 50 lines:
 
-Adding a new provider takes ~50 lines — just create a new client in `src/api_clients/` that extends `ApiInterface`.
+```python
+# src/api_clients/my_provider_client.py
+class MyProviderClient(ApiInterface):
+    PROVIDER_NAME = "myprovider"
+    
+    async def call_model_api(self, request, stream):
+        # Your API logic here
+        pass
+```
 
----
-
-## 🙏 Acknowledgements
-
-RelayFreeLLM would not exist without the generosity of the free-tier AI community and the open-source ecosystem that powers it.
-
-### Free-Tier Model Providers
-A sincere thank-you to these companies for making world-class AI accessible to everyone — students, hobbyists, and indie developers — completely free of charge:
-
-| Provider | What They Offer |
-|---|---|
-| **[Google Gemini](https://ai.google.dev/)** | Generous free tier for Gemini 2.5 Flash & Pro via Google AI Studio |
-| **[Groq](https://groq.com/)** | Ultra-fast LPU inference, free tier for Llama, Qwen, DeepSeek models |
-| **[Mistral AI](https://mistral.ai/)** | Free API access to Mistral and Codestral models |
-| **[Cerebras](https://cerebras.ai/)** | High-speed inference on powerful open models, free tier available |
-| **[DeepSeek](https://deepseek.com/)** | Frontier-quality open-weight models with a free API tier |
-| **[Cloudflare AI](https://developers.cloudflare.com/workers-ai/)** | Edge-based model inference, generous free tier |
-| **[Ollama](https://ollama.com/)** | Enabling anyone to run open-source LLMs locally, for free, forever |
-
-### Open-Source Projects
-This project is built on the shoulders of the open-source community, specifically but not limited to:
-
-- **[FastAPI](https://fastapi.tiangolo.com/)** — The async Python web framework powering the gateway
-- **[Pydantic](https://docs.pydantic.dev/)** — Data validation and OpenAI-compatible request/response modeling
-- **[httpx](https://www.python-httpx.org/)** — Async HTTP client for provider communication
-- **[OpenAI Python SDK](https://github.com/openai/openai-python)** — The de-facto standard API interface that makes this interoperable
+PRs welcome.
 
 ---
 
-## 🔍 Related Projects & Alternatives
+## Acknowledgements
 
-> If you found this useful, you might also be interested in: LiteLLM · OpenRouter · LocalAI · Ollama · LM Studio · oobabooga
+Built with [FastAPI](https://fastapi.tiangolo.com/), [Pydantic](https://docs.pydantic.dev/), and [httpx](https://www.python-httpx.org/).
+
+Powered by the generous free tiers of [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), [Mistral AI](https://mistral.ai/), [Cerebras](https://cerebras.ai/), and [Ollama](https://ollama.com/).
 
 ---
 
-*Made with ❤️ for those who love Open Source and AI but hate bills.*
+*Built for developers who want great AI without the bill.*
