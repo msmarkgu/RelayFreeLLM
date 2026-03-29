@@ -11,6 +11,10 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="fake")
 
 No code changes. No retry logic. No 429 errors breaking your app.
 
+## See It In Action
+
+![RelayFreeLLM Demo](https://raw.githubusercontent.com/msmarkgu/RelayFreeLLM/main/relayfreellm-demo.gif)
+
 ---
 
 ## Why You Need This
