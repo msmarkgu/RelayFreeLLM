@@ -39,7 +39,7 @@ Free AI APIs are powerful—but using them directly is painful:
 ✅ More providers = More throughput
 ```
 
-You get a **meta-model**: a single endpoint that routes to the best available free provider, handles failures automatically, and keeps your app running.
+You get a **meta-model**: a single endpoint that routes to the next available free provider, handles failures automatically, and keeps your app running.
 
 ---
 
