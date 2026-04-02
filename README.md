@@ -105,10 +105,53 @@ MODEL_STRATEGY=random # randomly pick a model of the currently selected provider
 python -m tests.test_models_availability
 ```
 
-### 4. Start
+Depending on your providers, the result should look like:
+
+```
+==================================================
+MODEL AVAILABILITY SUMMARY
+==================================================
+✅ PASS | Cerebras     | qwen-3-235b-a22b-instruct-2507           | Success
+✅ PASS | Groq         | llama-3.3-70b-versatile                  | Success
+✅ PASS | Groq         | qwen/qwen3-32b                           | Success
+✅ PASS | Groq         | openai/gpt-oss-20b                       | Success
+✅ PASS | Groq         | openai/gpt-oss-120b                      | Success
+✅ PASS | Groq         | moonshotai/kimi-k2-instruct-0905         | Success
+✅ PASS | Groq         | moonshotai/kimi-k2-instruct              | Success
+✅ PASS | Groq         | groq/compound                            | Success
+✅ PASS | Mistral      | mistral-large-latest                     | Success
+✅ PASS | Mistral      | mistral-medium-latest                    | Success
+✅ PASS | Mistral      | codestral-latest                         | Success
+✅ PASS | Mistral      | mistral-large-2512                       | Success
+✅ PASS | Mistral      | mistral-medium-2508                      | Success
+✅ PASS | Mistral      | mistral-medium-2505                      | Success
+✅ PASS | Mistral      | mistral-medium                           | Success
+✅ PASS | Mistral      | codestral-2508                           | Success
+✅ PASS | Gemini       | gemini-2.5-flash                         | Success
+==================================================
+TOTAL: 17/17 models available.
+
+```
+
+### 4. Start the Server
 
 ```bash
 python -m src.server
+```
+
+In console should see something like:
+
+```
+INFO:     Started server process [203452]
+INFO:     Waiting for application startup.
+...
+...
+...
+2026-04-01 19:44:04,123 - src.model_selector - INFO - Provider sequence: ['Cerebras', 'Groq', 'Mistral', 'Gemini', 'Ollama'], Provider Strategy: roundrobin, Model Strategy: roundrobin
+2026-04-01 19:44:04,123 - __main__ - INFO - Meta model 'meta-model' ready with providers: ['Cerebras', 'Cloudflare', 'Gemini', 'Groq', 'Mistral', 'Ollama']
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+
 ```
 
 ### 5. Use it
@@ -153,6 +196,35 @@ llm = ChatOpenAI(
     model="meta-model"
 )
 ```
+
+**REST Client Example**
+```
+POST http://localhost:8000/v1/chat/completions HTTP/1.1
+content-type: application/json
+
+{
+    "model": "meta-model",
+    "messages": [
+        {"role": "system", "content": "Format response in JSON."},
+        {"role": "user", "content": "When was the country Romania founded?"}
+    ]
+}
+
+### Specific Model Routing
+# Directly target a specific provider and model
+POST http://localhost:8000/v1/chat/completions HTTP/1.1
+content-type: application/json
+
+{
+    "model": "Mistral/mistral-large-latest",
+    "messages": [
+        {"role": "user", "content": "What is the capital of France?"}
+    ]
+}
+
+```
+
+See more exmaples in [./tests/api.http](./tests/api.http).
 
 ---
 
@@ -292,7 +364,7 @@ Found a new free provider? Adding one takes about 50 lines:
 # src/api_clients/my_provider_client.py
 class MyProviderClient(ApiInterface):
     PROVIDER_NAME = "myprovider"
-    
+
     async def call_model_api(self, request, stream):
         # Your API logic here
         pass
