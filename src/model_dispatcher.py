@@ -25,6 +25,8 @@ from .models import (
 from .model_selector import ModelSelector
 from .provider_registry import ProviderRegistry
 from .logging_util import ProjectLogger
+from .response_normalizer import ResponseNormalizer
+from .style_config import get_style_directive
 
 
 class ModelDispatcher:
@@ -38,6 +40,7 @@ class ModelDispatcher:
         self.selector = selector
         self.usage_tracker = usage_tracker
         self.logger = ProjectLogger.get_logger(__name__)
+        self.normalizer = ResponseNormalizer()
 
         # Sync: only keep providers in the selector that the registry can serve
         registered = set(registry.list_providers())
@@ -68,6 +71,14 @@ class ModelDispatcher:
         max_tokens = request.max_tokens
         response_format = request.response_format
         stream = request.stream
+
+        response_format_dict = None
+        if response_format:
+            response_format_dict = (
+                {"type": response_format.type}
+                if hasattr(response_format, "type")
+                else {}
+            )
 
         self.logger.info(f"chat() — user_prompt: {user_prompt[:80]}...")
 
@@ -243,16 +254,14 @@ class ModelDispatcher:
 
         api_client = self.registry.get_client(provider_name)
 
-        # Combine user system prompt with standard prompt
         full_sys_prompt = f"{system_prompt}\n\n{settings.STANDARD_SYSTEM_PROMPT}"
 
-        # Inject response format hint if requested
-        if response_format and getattr(response_format, "type", None) == "json_object":
-            json_hint = (
-                "\n\nIMPORTANT: Return ONLY a valid JSON object. "
-                "Do not include markdown blocks or any other text."
-            )
-            full_sys_prompt += json_hint
+        response_format_dict = None
+        if response_format:
+            response_format_dict = {"type": getattr(response_format, "type", None)}
+
+        style_directive = get_style_directive(response_format_dict)
+        full_sys_prompt = f"{full_sys_prompt}\n\n{style_directive}"
 
         model_resp = await api_client.call_model_api(
             user_prompt=user_prompt,
@@ -264,7 +273,9 @@ class ModelDispatcher:
         )
 
         if not stream:
-            self.logger.debug(f"Model response:\n{model_resp}")
+            normalized_resp = self.normalizer.normalize(model_resp, response_format_dict)
+            self.logger.debug(f"Model response:\n{normalized_resp}")
+            return normalized_resp
         return model_resp
 
     # ── Model discovery ─────────────────────────────────────────────

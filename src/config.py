@@ -63,6 +63,25 @@ class Settings:
         ),
     )
 
+    # --- Output Style Configuration ---
+    ENABLE_RESPONSE_NORMALIZATION: bool = os.getenv(
+        "ENABLE_RESPONSE_NORMALIZATION", "True"
+    ).lower() == "true"
+
+    UNIVERSAL_STYLE_GUIDE: str = os.getenv(
+        "UNIVERSAL_STYLE_GUIDE",
+        (
+            "OUTPUT STYLE RULES:\n"
+            "- Never start with \"As an AI\", \"Certainly\", \"Sure\", \"Of course\", or similar phrases\n"
+            "- Never say \"Here's the...\" or \"Let me...\" as an opener\n"
+            "- Provide direct answers without apology or hedging\n"
+            "- Use valid JSON when JSON is requested (no code fences, no text around it)\n"
+            "- Code blocks should include language specification\n"
+            "- Keep Markdown minimal and functional\n"
+            "- Respond in the same language as the user's question"
+        ),
+    )
+
     @classmethod
     def get_api_key(cls, key_name: str) -> str:
         """Get an API key by its config name. Raises if missing."""

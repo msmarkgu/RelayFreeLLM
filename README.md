@@ -54,6 +54,7 @@ You get a **meta-model**: a single endpoint that routes to the next available fr
 | **Rate limit management** | Built-in quota tracking. No external dependencies. |
 | **Real-time streaming** | SSE streaming from every provider. |
 | **Local models** | Mix cloud free tiers with your local Ollama instance. |
+| **Consistent output style** | Same tone, formatting, and quality regardless of which provider handles your request. No jarring style switches. |
 
 ---
 
@@ -178,6 +179,8 @@ response = client.chat.completions.create(
 )
 ```
 
+**Note on Consistent Output**: Regardless of which provider (Gemini, Groq, Mistral, etc.) handles your request, RelayFreeLLM ensures consistent output style through universal style guidance and response normalization. This means no jarring changes in tone or formatting when the system automatically fails over between providers.
+
 **cURL:**
 ```bash
 curl -X POST http://localhost:8000/v1/chat/completions \
@@ -260,10 +263,29 @@ When a provider hits a rate limit:
 
 ```
 Request → Groq (rate limited)
-       → Circuit breaker activates
-       → Retry → Gemini
-       → Retry → Mistral
-       → Success ✓
+        → Circuit breaker activates
+        → Retry → Gemini
+        → Retry → Mistral
+        → Success ✓
+```
+
+### Consistent Output Style
+
+Despite automatic switching between providers, RelayFreeLLM maintains consistent output style:
+
+- **Universal style guide** injected into every request's system prompt
+- **Response normalization** removes provider-specific quirks
+- **No jarring style switches** when failing over between providers
+- **Consistent tone, formatting, and quality** regardless of backend
+
+```
+Request → Gemini (adds "As an AI..." preamble)
+        → Normalizer removes preamble
+        → Clean, direct response returned
+
+Request → Groq (adds "Sure thing!" opener)
+        → Normalizer removes opener
+        → Same clean, direct response style
 ```
 
 ---
@@ -314,13 +336,26 @@ curl http://localhost:8000/v1/usage
 │  │  /v1/chat   │  │  (retries)  │  │ (quota) │  │
 │  └─────────────┘  └─────────────┘  └────┬────┘  │
 └─────────────────────────────────────────┼───────┘
-                                          │
-        ┌──────────┬──────────┬───────────┼──────────┐
-        ▼          ▼          ▼           ▼          ▼
-   ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌───────┐
-   │ Gemini │ │  Groq  │ │ Mistral│ │Cerebras│ │ Ollama│
-   └────────┘ └────────┘ └────────┘ └────────┘ └───────┘
+                                           │
+         ┌──────────┬──────────┬───────────┼──────────┐
+         ▼          ▼          ▼           ▼          ▼
+    ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌───────┐
+    │ Gemini │ │  Groq  │ │ Mistral│ │Cerebras│ │ Ollama│
+    └────────┘ └────────┘ └────────┘ └────────┘ └───────┘
 ```
+
+### Output Homogenization
+
+To ensure consistent user experience despite provider switching:
+
+1. **Style Directive Injection**: Universal style guide added to every request's system prompt
+2. **Response Normalization**: Post-processing removes provider-specific quirks:
+   - Strips AI preambles ("As an AI", "Certainly!", etc.)
+   - Standardizes markdown and code formatting
+   - Fixes and extracts JSON from code fences
+   - Ensures consistent tone and formatting
+
+This means users get the same high-quality, consistent output whether their request was handled by Gemini, Groq, Mistral, or any other provider.
 
 ---
 

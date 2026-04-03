@@ -80,10 +80,14 @@ class TestRelayFreeLLMCore(unittest.IsolatedAsyncioTestCase):
                 mock_client.call_model_api.assert_called()
 
     async def test_prompt_combination_and_standard_injection(self):
-        """Verify that system prompt and standard prompt are combined correctly."""
+        """Verify that system prompt, standard prompt, and style directive are combined correctly."""
+        from src.style_config import get_style_directive
+
         dispatcher = ModelDispatcher(self.mock_registry, self.mock_selector)
         sys_prompt = "Custom Sys Prompt"
-        expected_full_prompt = f"{sys_prompt}\n\n{settings.STANDARD_SYSTEM_PROMPT}"
+        standard_prompt = settings.STANDARD_SYSTEM_PROMPT
+        style_directive = get_style_directive()
+        expected_full_prompt = f"{sys_prompt}\n\n{standard_prompt}\n\n{style_directive}"
         
         self.mock_gemini.call_model_api.return_value = "Response"
         await dispatcher.call_provider_api("Gemini", "gemini-2.0-flash", "Hello", sys_prompt)
