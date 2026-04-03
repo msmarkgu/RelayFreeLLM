@@ -13,7 +13,6 @@ from ..config import settings
 
 class ApiInterface(ABC):
 
-    # Provider name — subclasses should set this
     PROVIDER_NAME: str = ""
 
     @abstractmethod
@@ -25,7 +24,7 @@ class ApiInterface(ABC):
         temperature: float,
         max_tokens: int,
         stream: bool = False,
-    ) -> str | object:  # Union[str, AsyncGenerator[str, None]]
+    ) -> str | object:
         pass
 
     @abstractmethod
