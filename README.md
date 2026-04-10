@@ -11,9 +11,6 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="fake")
 
 No code changes. No retry logic. No 429 errors breaking your app.
 
-## See It In Action
-
-![RelayFreeLLM Demo](https://raw.githubusercontent.com/msmarkgu/RelayFreeLLM/main/relayfreellm-demo.gif)
 
 ---
 
@@ -48,13 +45,13 @@ You get a **meta-model**: a single endpoint that routes to the best available fr
 | Feature | Why It Matters |
 |---------|----------------|
 | **OpenAI-compatible** | Drop-in for your existing code. LangChain, LlamaIndex, any SDK. |
-| **Any free providers** | Gemini, Groq, Mistral, Cerebras, Ollama, etc. |
-| **Automatic failover** | Provider down? One model hit limits? We try the next one, round-robin or random or by your preferences. Zero downtime. |
-| **Circuit breakers** | Bad provider? Quarantined automatically. |
-| **Rate limit management** | Built-in quota tracking. No external dependencies. |
-| **Real-time streaming** | SSE streaming from every provider. |
-| **Local models** | Mix cloud free tiers with your local Ollama instance. |
-| **Consistent output style** | Same tone, formatting, and quality regardless of which provider handles your request. No jarring style switches. |
+| **Session Affinity** | Lock users to specific providers via `X-Session-ID`. Faster responses via provider-side context caching. |
+| **Context Management** | 4 modes (Static, Dynamic, Reservoir, Adaptive). Smartly prunes long histories with multi-turn extractive summarization. |
+| **Automatic Failover** | Provider down? One model hit limits? We try the next one automatically. Zero downtime. |
+| **Consistent Output Style** | Universal style guidance and response normalizers eliminate provider-specific quirks. |
+| **Strict Boot Validation** | Server verifies all models, registry entries, and API keys before binding to ensure a healthy gateway. |
+| **Real-time Streaming** | Full SSE streaming support from every backend provider. |
+| **Local models** | Seamlessly mix cloud free tiers with your private Ollama instance. |
 
 ---
 
@@ -84,21 +81,27 @@ pip install -r requirements.txt
 Create a `.env` file:
 
 ```bash
+# --- Providers ---
 GEMINI_APIKEY=      # ai.google.dev
 GROQ_APIKEY=        # console.groq.com
 MISTRAL_APIKEY=     # console.mistral.ai
 CEREBRAS_APIKEY=    # cloud.cerebras.ai
-# any other providers you have
-#ABC_APIKEY=...
-#XYZ_APIKEY=...
-#Best_APIKEY=...
-# OLLMA model you host locally
-#OLLAMA_BASE_URL=http://localhost:11434  # optional
+DEEPSEEK_APIKEY=    # Optional
+OLLAMA_BASE_URL=http://localhost:11434  # Optional
 
-# tell RelayFreeLLM how to choose from providers and provided models.
-# default strategy is roundrobin for both.
-PROVIDER_STRATEGY=roundrobin # pick provider in turn
-MODEL_STRATEGY=random # randomly pick a model of the currently selected provider
+# --- Selection Strategies ---
+PROVIDER_STRATEGY=roundrobin   # options: roundrobin, random, weight
+MODEL_STRATEGY=roundrobin      # options: roundrobin, random, weight
+
+# --- Session & Affinity ---
+SESSION_AFFINITY_ENABLED=True  # Pin sessions to providers
+SESSION_TTL_HOURS=24           # How long to keep affinity locks
+
+# --- Context Management ---
+# Modes: static, dynamic, reservoir, adaptive
+CONTEXT_MANAGEMENT_MODE=reservoir 
+CONTEXT_RESERVOIR_RECENT_KEEP=10  # Verbatim messages
+CONTEXT_RESERVOIR_SUMMARY_BUDGET=400 # Tokens for old history summary
 ```
 
 ### 3. Verify connectivity (optional but recommended)
@@ -112,11 +115,10 @@ Depending on your providers, the result should look like:
 ==================================================
 MODEL AVAILABILITY SUMMARY
 ==================================================
-✅ PASS | Cerebras     | qwen-3-235b-a22b-instruct-2507           | Success
-✅ PASS | Groq         | llama-3.3-70b-versatile                  | Success
-✅ PASS | Groq         | qwen/qwen3-32b                           | Success
-✅ PASS | Groq         | openai/gpt-oss-20b                       | Success
-✅ PASS | Groq         | openai/gpt-oss-120b                      | Success
+✅ PASS | Groq         | llama-3.2-3b-preview                     | Success
+✅ PASS | Groq         | llama-3.2-11b-vision-preview             | Success
+✅ PASS | Groq         | llama-3.2-90b-vision-preview             | Success
+✅ PASS | Groq         | llama-3.1-405b-reasoning                 | Success
 ✅ PASS | Groq         | moonshotai/kimi-k2-instruct-0905         | Success
 ✅ PASS | Groq         | moonshotai/kimi-k2-instruct              | Success
 ✅ PASS | Groq         | groq/compound                            | Success
@@ -200,7 +202,7 @@ llm = ChatOpenAI(
 )
 ```
 
-**REST Client Example**
+**REST Client Example** (using [VS Code REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension)
 ```
 POST http://localhost:8000/v1/chat/completions HTTP/1.1
 content-type: application/json
@@ -227,7 +229,13 @@ content-type: application/json
 
 ```
 
-See more exmaples in [./tests/api.http](./tests/api.http).
+See more examples in [./tests/api.http](./tests/api.http).
+
+---
+
+## See It In Action
+
+![RelayFreeLLM Demo](https://raw.githubusercontent.com/msmarkgu/RelayFreeLLM/main/relayfreellm-demo.gif)
 
 ---
 
@@ -278,6 +286,34 @@ Despite automatic switching between providers, RelayFreeLLM maintains consistent
 - **No jarring style switches** when failing over between providers
 - **Consistent tone, formatting, and quality** regardless of backend
 
+---
+
+## Advanced Features
+
+### Session Affinity (Conversation Caching)
+
+In multi-turn conversations, many providers (like Gemini and Anthropic) offer **Context Caching** optimizations. To benefit from this, RelayFreeLLM supports Session Affinity.
+
+By passing the `X-Session-ID` header, RelayFreeLLM will try to "pin" a user to the same provider for the duration of their session.
+
+1. **User sends request** with `X-Session-ID: user-123`.
+2. **Gateway routes** to Gemini and locks that session ID to Gemini.
+3. **Subsequent requests** from `user-123` bypass the round-robin logic and go straight back to Gemini.
+4. If Gemini fails or hit limits, the gateway automatically migrates the session to the next best provider and re-pins it.
+
+### Multi-Turn Context Management
+
+As conversations grow, they exceed free tier context limits. RelayFreeLLM's `ContextManager` uses advanced pruning to keep chats alive:
+
+| Mode | Behavior |
+|------|----------|
+| **Static** | Keeps the last $N$ messages verbatim. Simplest but loses far context. |
+| **Dynamic** | Uses real-time token tracking to boost the context window when usage is low, or contract it when usage spikes, ensuring you never exceed model context limits. |
+| **Reservoir** | Keeps recent messages verbatim + adds an **extractive summary** of the older conversation. |
+| **Adaptive** | Detects task type (e.g., coding vs chat) and switches between Reservoir and Static modes automatically. |
+
+**Extractive Summarization**: Unlike simple truncation, Reservoir mode preserves the "essence" of your history. It uses a **TF-scoring algorithm** (Term Frequency) to identify sentences with the most unique information, applies a **position bias** for topicality, and greedily selects the highest-scoring segments to fit within your token budget.
+
 ```
 Request → Gemini (adds "As an AI..." preamble)
         → Normalizer removes preamble
@@ -324,24 +360,29 @@ curl http://localhost:8000/v1/usage
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│                 Your Application                │
-│         (OpenAI SDK, LangChain, etc.)           │
-└─────────────────────┬───────────────────────────┘
-                      │ OpenAI-compatible API
-┌─────────────────────▼───────────────────────────┐
-│              RelayFreeLLM Gateway               │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────┐  │
-│  │   Router    │→ │  Dispatcher │→ │ Selector│  │
-│  │  /v1/chat   │  │  (retries)  │  │ (quota) │  │
-│  └─────────────┘  └─────────────┘  └────┬────┘  │
-└─────────────────────────────────────────┼───────┘
-                                           │
-         ┌──────────┬──────────┬───────────┼──────────┐
-         ▼          ▼          ▼           ▼          ▼
-    ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌───────┐
-    │ Gemini │ │  Groq  │ │ Mistral│ │Cerebras│ │ Ollama│
-    └────────┘ └────────┘ └────────┘ └────────┘ └───────┘
+        ┌─────────────────────────────────────────────────┐
+        │                 Your Application                │
+        │         (OpenAI SDK, LangChain, etc.)           │
+        └─────────────────────┬───────────────────────────┘
+                              │ OpenAI-compatible API
+                              │ (with optional X-Session-ID)
+        ┌─────────────────────▼───────────────────────────┐
+        │              RelayFreeLLM Gateway               │
+        │  ┌───────────┐    ┌───────────┐    ┌──────────┐  │
+        │  │  Router   │───▶│Dispatcher │───▶│ContextMgr│  │
+        │  │ /v1/chat  │    │ (Retries) │    │(Summary) │  │
+        │  └───────────┘    └─────┬─────┘    └──────────┘  │
+        │                         │          ┌──────────┐  │
+        │                         └─────────▶│Affinity  │  │
+        │                                    │  Map     │  │
+        │                                    └──────────┘  │
+        └─────────────────────────┬───────────────────────┘
+                                  │
+         ┌──────────┬──────────┬─────┴────┬──────────┬──────────┐
+         ▼          ▼          ▼          ▼          ▼          ▼
+    ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
+    │ Gemini │ │  Groq  │ │ Mistral│ │Cerebras│ │DeepSeek│ │ Ollama │
+    └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ └────────┘
 ```
 
 ### Output Homogenization
