@@ -8,6 +8,7 @@ and produces OpenAI-compatible responses.
 import asyncio
 import time
 import traceback
+from collections import defaultdict
 
 from .config import settings
 from .exceptions import (
@@ -50,6 +51,7 @@ class ModelDispatcher:
         
         self.session_affinity_map = {}
         self.affinity_lock = Lock()
+        self.provider_locks = defaultdict(asyncio.Lock)
 
     # ── Primary "meta model" entry point (OpenAI-compatible) ────────
 
@@ -362,13 +364,25 @@ class ModelDispatcher:
         # Add current user message
         messages.append({"role": "user", "content": user_prompt})
 
-        model_resp = await api_client.call_model_api(
-            messages=messages,
-            model=model_name,
-            temperature=temperature or settings.DEFAULT_TEMPERATURE,
-            max_tokens=max_tokens or settings.DEFAULT_MAX_TOKENS,
-            stream=stream,
-        )
+        # Global Provider Lock: Optional serialization per provider
+        if settings.GLOBAL_PROVIDER_LOCK:
+            self.logger.info(f"Global lock enabled. Waiting for {provider_name} lock...")
+            async with self.provider_locks[provider_name]:
+                model_resp = await api_client.call_model_api(
+                    messages=messages,
+                    model=model_name,
+                    temperature=temperature or settings.DEFAULT_TEMPERATURE,
+                    max_tokens=max_tokens or settings.DEFAULT_MAX_TOKENS,
+                    stream=stream,
+                )
+        else:
+            model_resp = await api_client.call_model_api(
+                messages=messages,
+                model=model_name,
+                temperature=temperature or settings.DEFAULT_TEMPERATURE,
+                max_tokens=max_tokens or settings.DEFAULT_MAX_TOKENS,
+                stream=stream,
+            )
 
         if not stream:
             normalized_resp = self.normalizer.normalize(model_resp, response_format_dict)

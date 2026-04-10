@@ -34,7 +34,6 @@ class GroqClient(ApiInterface):
         max_tokens: int = 4000,
         stream: bool = False,
     ) -> str | object:
-        await asyncio.sleep(1)
 
         try:
             if stream:
