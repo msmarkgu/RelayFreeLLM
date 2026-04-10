@@ -78,6 +78,14 @@ class ModelSelector:
 
         return providers
 
+    def remove_provider(self, name: str) -> None:
+        """Remove an assigned provider if it fails implementation constraints."""
+        if name in self.providers:
+            del self.providers[name]
+        if name in self.provider_sequence:
+            self.provider_sequence.remove(name)
+        self.logger.info(f"Removed '{name}' from ModelSelector limits mapping.")
+
     def estimate_tokens(self, text):
         # Simplified token estimate: 1 word ≈ 1.3 tokens
         return int(len(text.split()) * 1.3)

@@ -51,16 +51,6 @@ class ModelDispatcher:
         self.session_affinity_map = {}
         self.affinity_lock = Lock()
 
-        # Sync: only keep providers in the selector that the registry can serve
-        registered = set(registry.list_providers())
-        selector_provs = list(selector.provider_sequence)
-        removed = [p for p in selector_provs if p not in registered]
-        if removed:
-            self.logger.warning(
-                f"Removing unregistered providers from selector: {removed}"
-            )
-            selector.provider_sequence = [p for p in selector_provs if p in registered]
-
     # ── Primary "meta model" entry point (OpenAI-compatible) ────────
 
     async def chat(

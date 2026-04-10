@@ -7,6 +7,7 @@ and makes them available to routes via app.state.
 """
 
 import logging
+import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -35,12 +36,34 @@ async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle for shared state."""
     logger.info("=== RelayFreeLLM starting up ===")
 
-    # 1. Auto-discover provider clients
+    # 1. Auto-discover provider clients (This asserts Python code & API keys are valid)
     registry = ProviderRegistry()
     registry.auto_discover()
 
-    # 2. Initialize model selector (loads rate limits from JSON)
+    # 2. Initialize model selector (This asserts limits exist in JSON)
     selector = ModelSelector()
+
+    # --- SYNCHRONIZE AND VALIDATE ---
+    registered_providers = set(registry.list_providers())
+    json_providers = set(selector.providers.keys())
+
+    active_providers = registered_providers.intersection(json_providers)
+
+    # Scour out unsupported providers
+    for p in list(registered_providers):
+        if p not in active_providers:
+            logger.warning(f"Provider '{p}' has credentials/code but lacks JSON limits! Pruning.")
+            registry.unregister(p)
+
+    for p in list(json_providers):
+        if p not in active_providers:
+            logger.warning(f"Provider '{p}' has JSON limits but lacks credentials/code! Pruning.")
+            selector.remove_provider(p)
+
+    # ABORT IF EMPTY
+    if len(active_providers) == 0:
+        logger.critical("No valid providers registered (check .env and JSON limits)! Aborting server startup.")
+        sys.exit(1)
 
     # 3. Initialize usage tracker (persisted stats)
     usage_tracker = UsageTracker()
