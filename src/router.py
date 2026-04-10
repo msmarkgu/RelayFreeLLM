@@ -94,13 +94,32 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
         chat_request = ChatCompletionRequest(**body)
         dispatcher = get_dispatcher(request)
 
+        # Read session ID from header (used by context manager for per-session history)
+        session_id = request.headers.get(settings.SESSION_ID_HEADER, "default")
+
+        # Extract conversation history (all messages except the last user message).
+        # Done here — before the stream/non-stream split — so both paths share it.
+        conversation_history = []
+        if len(chat_request.messages) > 1:
+            conversation_history = chat_request.messages[:-1]
+
         if not chat_request.stream:
-            result = await dispatcher.chat(chat_request)
+            result = await dispatcher.chat(
+                chat_request,
+                conversation_history=conversation_history,
+                session_id=session_id,
+            )
             return JSONResponse(content=result.model_dump(), status_code=200)
 
         # Handle Streaming
         async def stream_generator():
-            generator = await dispatcher.chat(chat_request)
+            # Fix: pass conversation_history and session_id so streaming requests
+            # also benefit from context management (previously missing).
+            generator = await dispatcher.chat(
+                chat_request,
+                conversation_history=conversation_history,
+                session_id=session_id,
+            )
             chat_id = f"chatcmpl-{uuid4().hex[:12]}"
             created = int(datetime.datetime.now().timestamp())
 

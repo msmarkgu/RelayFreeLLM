@@ -35,9 +35,8 @@ class OllamaClient(ApiInterface):
 
     async def call_model_api(
         self,
-        user_prompt: str,
+        messages: list[dict],
         model: str,
-        sys_instruct: str,
         temperature: float,
         max_tokens: int,
         stream: bool = False,
@@ -48,10 +47,7 @@ class OllamaClient(ApiInterface):
         url = f"{self.base_url}/v1/chat/completions"
         payload = {
             "model": model,
-            "messages": [
-                {"role": "system", "content": sys_instruct},
-                {"role": "user", "content": user_prompt},
-            ],
+            "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
             "stream": stream,

@@ -30,6 +30,9 @@ class Settings:
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+    SESSION_ID_HEADER: str = os.getenv("SESSION_ID_HEADER", "X-Session-ID")
+    SESSION_AFFINITY_ENABLED: bool = str(os.getenv("SESSION_AFFINITY_ENABLED", "True")).lower() == "true"
+    SESSION_TTL_HOURS: int = int(os.getenv("SESSION_TTL_HOURS", "24"))
 
     # --- Model Defaults ---
     DEFAULT_TEMPERATURE: float = float(os.getenv("DEFAULT_TEMPERATURE", "0.8"))
@@ -81,6 +84,48 @@ class Settings:
             "- Respond in the same language as the user's question"
         ),
     )
+
+    # --- Context Management Configuration ---
+    CONTEXT_MANAGEMENT_MODE: str = os.getenv(
+        "CONTEXT_MANAGEMENT_MODE", "static"
+    )  # static, dynamic, reservoir, adaptive
+
+    # Static mode: keep last N messages verbatim
+    CONTEXT_STATIC_RECENT_KEEP: int = int(os.getenv(
+        "CONTEXT_STATIC_RECENT_KEEP", "10"
+    ))
+
+    # Dynamic mode: adjust based on usage vs target
+    CONTEXT_DYNAMIC_UTILIZATION_TARGET: float = float(os.getenv(
+        "CONTEXT_DYNAMIC_UTILIZATION_TARGET", "0.8"
+    ))  # Target utilization (0.0-1.0)
+    CONTEXT_DYNAMIC_MIN_UTILIZATION: float = float(os.getenv(
+        "CONTEXT_DYNAMIC_MIN_UTILIZATION", "0.3"
+    ))  # Below this, boost allowed
+    CONTEXT_DYNAMIC_MAX_BOOST: float = float(os.getenv(
+        "CONTEXT_DYNAMIC_MAX_BOOST", "1.5"
+    ))  # Maximum boost factor
+
+    # Reservoir mode: keep recent verbatim, summarize older
+    CONTEXT_RESERVOIR_RECENT_KEEP: int = int(os.getenv(
+        "CONTEXT_RESERVOIR_RECENT_KEEP", "15"
+    ))  # Recent messages to keep verbatim
+    CONTEXT_RESERVOIR_SUMMARY_BUDGET: int = int(os.getenv(
+        "CONTEXT_RESERVOIR_SUMMARY_BUDGET", "400"
+    ))  # Tokens for summary of older content
+
+    # Extractive summarization
+    SUMMARIZATION_MAX_TOKENS: int = int(os.getenv(
+        "SUMMARIZATION_MAX_TOKENS", "200"
+    ))  # Max tokens for each extractive summary
+
+    # Adaptive mode: task-based allocation
+    CONTEXT_TASK_AWARE_ENABLED: bool = os.getenv(
+        "CONTEXT_TASK_AWARE_ENABLED", "False"
+    ).lower() == "true"
+    CONTEXT_TASK_DEFAULT: str = os.getenv(
+        "CONTEXT_TASK_DEFAULT", "general"
+    )  # Default task when detection fails
 
     @classmethod
     def get_api_key(cls, key_name: str) -> str:

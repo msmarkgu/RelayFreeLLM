@@ -71,6 +71,7 @@ class ModelSelector:
                         m["limits"],
                         model_type=m.get("type", metadata["type"]),
                         model_scale=m.get("scale", metadata["scale"]),
+                        max_context_length=m.get("Max_Context_Length", 4096),
                     )
                 )
             providers[provider_name] = ApiProvider(provider_name, models)
@@ -223,6 +224,7 @@ class ModelSelector:
                         "type": model.model_type,
                         "scale": model.model_scale,
                         "limits": model.limits,
+                        "Max_Context_Length": model.max_context_length,
                     }
                 )
                 for limit_key in aggregate_limits:
@@ -345,6 +347,7 @@ class ModelSelector:
                         self.DEFAULT_LIMITS.copy(),
                         model_type=metadata["type"],
                         model_scale=metadata["scale"],
+                        max_context_length=4096,
                     )
                     provider.models.append(new_tracker)
 
@@ -363,6 +366,7 @@ class ModelSelector:
                         "type": model.model_type,
                         "scale": model.model_scale,
                         "limits": model.limits,
+                        "Max_Context_Length": model.max_context_length,
                     }
                 )
             data["providers"].append(prov_data)

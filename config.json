@@ -1,0 +1,26 @@
+{
+  "session": {
+    "affinity_enabled": true,
+    "id_header": "X-Session-ID",
+    "ttl_hours": 24
+  },
+  
+  "context": {
+    "_management_mode_options": "Available modes: static, dynamic, reservoir, adaptive, disabled",
+    "management_mode": "static",
+    "static_recent_keep": 10,
+    "dynamic_utilization_target": 0.8,
+    "dynamic_min_utilization": 0.3,
+    "dynamic_max_boost": 1.5,
+    "reservoir_recent_keep": 15,
+    "reservoir_summary_budget": 400
+  },
+  
+  "summarization": {
+    "enabled": true,
+    "mode": "extractive",
+    "max_tokens": 200,
+    "timeout_ms": 2000,
+    "fallback_to_extractive": true
+  }
+}

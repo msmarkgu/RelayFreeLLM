@@ -18,9 +18,8 @@ class ApiInterface(ABC):
     @abstractmethod
     async def call_model_api(
         self,
-        user_prompt: str,
+        messages: list[dict],
         model: str,
-        sys_instruct: str,
         temperature: float,
         max_tokens: int,
         stream: bool = False,

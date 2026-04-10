@@ -28,9 +28,8 @@ class GroqClient(ApiInterface):
 
     async def call_model_api(
         self,
-        user_prompt: str = "introduce yourself",
+        messages: list[dict],
         model: str = "qwen/qwen3-32b",
-        sys_instruct: str = "return answer in markdown",
         temperature: float = 0.8,
         max_tokens: int = 4000,
         stream: bool = False,
@@ -42,10 +41,7 @@ class GroqClient(ApiInterface):
 
                 async def generate():
                     stream_resp = self.client.chat.completions.create(
-                        messages=[
-                            {"role": "system", "content": sys_instruct},
-                            {"role": "user", "content": user_prompt},
-                        ],
+                        messages=messages,
                         model=model,
                         temperature=temperature,
                         max_completion_tokens=max_tokens,
@@ -58,10 +54,7 @@ class GroqClient(ApiInterface):
                 return generate()
 
             chat_completion = self.client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": sys_instruct},
-                    {"role": "user", "content": user_prompt},
-                ],
+                messages=messages,
                 model=model,
                 temperature=temperature,
                 max_completion_tokens=max_tokens,
