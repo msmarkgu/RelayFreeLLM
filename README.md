@@ -18,7 +18,7 @@ No code changes. No retry logic. No 429 errors breaking your app.
 
 ### The Free Tier Problem
 
-Free AI APIs are powerful—but using them directly is painful:
+Free AI APIs are useful—but using them directly can be painful:
 
 ```
 ❌ Groq hits rate limit → Your app crashes
@@ -36,7 +36,7 @@ Free AI APIs are powerful—but using them directly is painful:
 ✅ More providers = More throughput
 ```
 
-You get a **meta-model**: a single endpoint that routes to the best available free provider, handles failures automatically, and keeps your app running.
+You get a **meta-model**: a single endpoint that routes to the next available free provider, offers flexible context management, maintains session affinity, and fails over automatically to keep your app running.
 
 ---
 
@@ -168,7 +168,7 @@ client = OpenAI(
     api_key="relay-free"
 )
 
-# Automatic routing - picks the best available
+# Automatic routing - picks the next available free provider
 response = client.chat.completions.create(
     model="meta-model",
     messages=[{"role": "user", "content": "Hello!"}]
@@ -246,7 +246,7 @@ See more examples in [./tests/api.http](./tests/api.http).
 Tell RelayFreeLLM what you need:
 
 ```json
-// "Any model from any providers, RelayFreeLLM will choose one"
+// "Any model from any providers, RelayFreeLLM will choose the next available"
 {"model": "meta-model", "messages": [...]}
 
 // "Give me coding model from any providers"
