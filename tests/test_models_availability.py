@@ -23,9 +23,11 @@ async def test_model(registry, provider_name, model_name):
 
         # Simple probe request
         response = await client.call_model_api(
-            user_prompt="Hi, introduce yourself.",
+            messages=[
+                {"role": "system", "content": "Be brief."},
+                {"role": "user", "content": "Hi, introduce yourself."}
+            ],
             model=model_name,
-            sys_instruct="Be brief.",
             temperature=0.1,
             max_tokens=1000
         )

@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient
 # Import the FastAPI application.  The implementation plan uses
 # ``src.main`` as the entry point; adjust the import if your layout differs.
 # ----------------------------------------------------------------------
-from src.main import app  # <-- change if your entry point differs
+from src.server import app
 
 
 # ----------------------------------------------------------------------
@@ -45,7 +45,7 @@ def client() -> TestClient:
 # ----------------------------------------------------------------------
 def _get_models(client: TestClient):
     """Perform a GET /models request and return the ``Response`` object."""
-    return client.get("/models")
+    return client.get("/v1/models")
 
 
 # ----------------------------------------------------------------------

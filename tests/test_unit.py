@@ -93,8 +93,15 @@ class TestRelayFreeLLMCore(unittest.IsolatedAsyncioTestCase):
         await dispatcher.call_provider_api("Gemini", "gemini-2.0-flash", "Hello", sys_prompt)
         
         call_args = self.mock_gemini.call_model_api.call_args.kwargs
-        self.assertEqual(call_args['user_prompt'], "Hello")
-        self.assertEqual(call_args['sys_instruct'], expected_full_prompt)
+        messages = call_args['messages']
+        
+        # In current implementation: [sys_prompt, user_prompt]
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0]['role'], "system")
+        self.assertIn(sys_prompt, messages[0]['content'])
+        self.assertIn(standard_prompt, messages[0]['content'])
+        self.assertEqual(messages[1]['role'], "user")
+        self.assertEqual(messages[1]['content'], "Hello")
 
     async def test_get_wait_time_calculation(self):
         """Verify the mathematical wait time calculation in ApiLimitsTracker."""
