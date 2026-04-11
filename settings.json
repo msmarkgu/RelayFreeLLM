@@ -28,5 +28,9 @@
   "routing": {
     "global_provider_lock": true,
     "comment": "It ensures only one request is sent to a specific provider at a time, eliminating 429 errors without needing static timers."
+  },
+  
+  "http": {
+    "timeout_seconds": 60
   }
 }

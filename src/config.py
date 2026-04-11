@@ -96,6 +96,12 @@ class Settings:
         self.CONTEXT_TASK_AWARE_ENABLED = False
         self.CONTEXT_TASK_DEFAULT = "general"
 
+        # HTTP Timeout Configuration
+        self.HTTP_TIMEOUT = 60.0
+        self.HTTP_CONNECT_TIMEOUT = 10.0
+        self.HTTP_READ_TIMEOUT = 60.0
+        self.HTTP_STREAM_TIMEOUT = 120.0
+
     def _load_from_json(self):
         """Overlay settings from settings.json."""
         if not os.path.exists(self.SETTINGS_FILE):
@@ -118,7 +124,8 @@ class Settings:
                 "context.reservoir_recent_keep": "CONTEXT_RESERVOIR_RECENT_KEEP",
                 "context.reservoir_summary_budget": "CONTEXT_RESERVOIR_SUMMARY_BUDGET",
                 "summarization.max_tokens": "SUMMARIZATION_MAX_TOKENS",
-                "routing.global_provider_lock": "GLOBAL_PROVIDER_LOCK"
+                "routing.global_provider_lock": "GLOBAL_PROVIDER_LOCK",
+                "http.timeout_seconds": "REQUEST_TIMEOUT_SECONDS",
             }
 
             for json_path, attr_name in mappings.items():

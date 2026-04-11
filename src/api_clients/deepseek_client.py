@@ -27,7 +27,7 @@ class DeepSeekClient(ApiInterface):
             "Content-Type": "application/json"
         }
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT_SECONDS) as client:
                 response = await client.get(
                     f"{self.base_url}/models",
                     headers=headers
@@ -63,7 +63,7 @@ class DeepSeekClient(ApiInterface):
         }
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT_SECONDS) as client:
                 response = await client.post(
                     f"{self.base_url}/chat/completions",
                     headers=headers,

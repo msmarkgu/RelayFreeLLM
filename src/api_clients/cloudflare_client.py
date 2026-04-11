@@ -33,7 +33,7 @@ class CloudflareClient(ApiInterface):
         }
 
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT_SECONDS) as client:
                 response = await client.get(url, headers=headers)
                 response.raise_for_status()
                 data = response.json()
@@ -70,7 +70,7 @@ class CloudflareClient(ApiInterface):
         }
 
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT_SECONDS) as client:
                 await asyncio.sleep(0.5)
                 
                 response = await client.post(url, headers=headers, json=payload, timeout=60.0)

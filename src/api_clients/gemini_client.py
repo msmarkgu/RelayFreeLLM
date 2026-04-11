@@ -17,6 +17,8 @@ class GeminiClient(ApiInterface):
 
     def __init__(self):
         api_key = settings.get_api_key("GEMINI_APIKEY")
+        # Note: http_options.timeout doesn't apply to all SDK internal calls
+        # Keep original client config without custom timeout
         self.client = genai.Client(api_key=api_key)
         self.logger = ProjectLogger.get_logger(__name__)
 

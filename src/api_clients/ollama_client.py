@@ -24,7 +24,7 @@ class OllamaClient(ApiInterface):
     async def list_models(self) -> list[str]:
         """Fetch local models from Ollama's tags endpoint."""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT_SECONDS) as client:
                 response = await client.get(f"{self.base_url}/api/tags")
                 response.raise_for_status()
                 data = response.json()

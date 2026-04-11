@@ -15,7 +15,7 @@ class CerebrasClient(ApiInterface):
 
     def __init__(self):
         api_key = settings.get_api_key("CEREBRAS_APIKEY")
-        self.client = Cerebras(api_key=api_key)
+        self.client = Cerebras(api_key=api_key, timeout=settings.REQUEST_TIMEOUT_SECONDS)
         self.logger = ProjectLogger.get_logger(__name__)
 
     async def list_models(self) -> list[str]:

@@ -15,7 +15,8 @@ class MistralClient(ApiInterface):
 
     def __init__(self):
         api_key = settings.get_api_key("MISTRAL_APIKEY")
-        self.client = Mistral(api_key=api_key)
+        timeout_ms = int(settings.REQUEST_TIMEOUT_SECONDS * 1000)
+        self.client = Mistral(api_key=api_key, timeout_ms=timeout_ms)
         self.logger = ProjectLogger.get_logger(__name__)
 
     async def list_models(self) -> list[str]:
