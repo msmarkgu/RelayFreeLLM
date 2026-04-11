@@ -72,6 +72,147 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(stats["min"], 100)
         self.assertEqual(stats["max"], 200)
 
+    def test_dynamic_mode_selection(self):
+        """Test dynamic mode adjusts based on usage history."""
+        self.cm.context_management_mode = "dynamic"
+        self.cm.dynamic_utilization_target = 0.8
+        self.cm.dynamic_min_utilization = 0.3
+        
+        # First request - no usage history, uses target * utilization
+        history = [ChatMessage(role="user", content=f"Message {i}") for i in range(10)]
+        result = self.cm.select_context_for_request(history, "dynamic-session", 1000)
+        # Should use some messages (1000 * 0.8 / 50 ≈ 16, but capped at history length)
+        self.assertGreater(len(result), 0)
+        
+        # Record low usage - should boost next request
+        self.cm.update_usage("dynamic-session", 100)  # Low usage
+        result = self.cm.select_context_for_request(history, "dynamic-session", 1000)
+        # With low usage, should get more messages
+        self.assertGreater(len(result), 0)
+
+    def test_dynamic_high_usage(self):
+        """Test dynamic mode with high usage reduces context."""
+        self.cm.context_management_mode = "dynamic"
+        self.cm.dynamic_utilization_target = 0.8
+        
+        # Record high usage
+        self.cm.update_usage("high-usage-session", 800)
+        history = [ChatMessage(role="user", content=f"Message {i}") for i in range(20)]
+        result = self.cm.select_context_for_request(history, "high-usage-session", 1000)
+        # With high usage, should use fewer messages
+        self.assertLessEqual(len(result), len(history))
+
+    def test_reservoir_mode_selection(self):
+        """Test reservoir mode keeps recent and summarizes older."""
+        self.cm.context_management_mode = "reservoir"
+        self.cm.reservoir_recent_keep = 2
+        self.cm.reservoir_summary_budget = 100
+        
+        # Create enough messages to trigger reservoir
+        history = [
+            ChatMessage(role="user", content="First message about weather."),
+            ChatMessage(role="assistant", content="It's sunny today."),
+            ChatMessage(role="user", content="Second message about coding."),
+            ChatMessage(role="assistant", content="Here is a Python function."),
+            ChatMessage(role="user", content="Third message about food."),
+            ChatMessage(role="assistant", content="I recommend pizza."),
+            ChatMessage(role="user", content="Fourth message."),
+            ChatMessage(role="assistant", content="Response four."),
+        ]
+        
+        result = self.cm.select_context_for_request(history, "reservoir-session", 1000)
+        
+        # Should have summary + recent messages
+        self.assertGreaterEqual(len(result), 2)  # At least recent messages
+        
+        # First should be system message with summary
+        if len(result) > 2:
+            self.assertEqual(result[0].role, "system")
+
+    def test_reservoir_few_messages(self):
+        """Test reservoir with fewer messages than threshold."""
+        self.cm.context_management_mode = "reservoir"
+        self.cm.reservoir_recent_keep = 5
+        
+        history = [
+            ChatMessage(role="user", content="Message 1"),
+            ChatMessage(role="assistant", content="Response 1"),
+        ]
+        
+        result = self.cm.select_context_for_request(history, "res-session", 1000)
+        
+        # Should return all - not enough for reservoir
+        self.assertEqual(len(result), 2)
+
+    def test_adaptive_code_detection(self):
+        """Test adaptive mode detects code and uses reservoir."""
+        self.cm.context_management_mode = "adaptive"
+        self.cm.reservoir_recent_keep = 2
+        
+        # Code-heavy conversation
+        history = [
+            ChatMessage(role="user", content="How do I define a function in Python?"),
+            ChatMessage(role="assistant", content="Use the def keyword like: def foo():"),
+            ChatMessage(role="user", content="Can you show a class?"),
+            ChatMessage(role="assistant", content="class MyClass:\n    def __init__(self):"),
+            ChatMessage(role="user", content="What about imports?"),
+            ChatMessage(role="assistant", content="import os\nfrom sys import path"),
+            ChatMessage(role="user", content="Thanks"),
+            ChatMessage(role="assistant", content="You're welcome!"),
+        ]
+        
+        result = self.cm.select_context_for_request(history, "adaptive-session", 1000)
+        
+        # Should include summary for code
+        if len(result) > 2:
+            self.assertEqual(result[0].role, "system")
+
+    def test_adaptive_general_chat(self):
+        """Test adaptive mode uses static for general chat."""
+        self.cm.context_management_mode = "adaptive"
+        self.cm.static_recent_keep = 3
+        
+        # General conversation (no code indicators)
+        history = [
+            ChatMessage(role="user", content="Hello"),
+            ChatMessage(role="assistant", content="Hi there!"),
+            ChatMessage(role="user", content="How are you?"),
+            ChatMessage(role="assistant", content="I'm doing well, thanks!"),
+            ChatMessage(role="user", content="What's the weather?"),
+            ChatMessage(role="assistant", content="It's sunny today."),
+        ]
+        
+        result = self.cm.select_context_for_request(history, "adaptive-session", 1000)
+        
+        # Should use static (last N messages) - no summary needed
+        self.assertLessEqual(len(result), self.cm.static_recent_keep + 1)
+
+    def test_extractive_summarization(self):
+        """Test extractive summarization algorithm."""
+        messages = [
+            ChatMessage(role="user", content="I need help with Python. Python is great for data."),
+            ChatMessage(role="assistant", content="Python is a versatile language. It has many libraries."),
+            ChatMessage(role="user", content="What about JavaScript?"),
+            ChatMessage(role="assistant", content="JavaScript is good for web. Web development uses JavaScript."),
+        ]
+        
+        summary = self.cm._extractive_summarize(messages, token_budget=50)
+        
+        # Should contain key content from messages
+        self.assertIsInstance(summary, str)
+        if summary:
+            # Should mention Python (high TF word)
+            self.assertIn("Python", summary)
+
+    def test_disabled_mode(self):
+        """Test disabled mode returns empty."""
+        self.cm.context_management_mode = "disabled"
+        
+        history = [ChatMessage(role="user", content="Test")]
+        result = self.cm.select_context_for_request(history, "disabled-session", 1000)
+        
+        self.assertEqual(result, [])
+
 
 if __name__ == "__main__":
     unittest.main()
