@@ -2,7 +2,8 @@
   "session": {
     "affinity_enabled": true,
     "id_header": "X-Session-ID",
-    "ttl_hours": 24
+    "ttl_hours": 24,
+    "max_sessions": 1000
   },
   
   "context": {

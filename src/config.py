@@ -43,6 +43,7 @@ class Settings:
         self.SESSION_ID_HEADER = "X-Session-ID"
         self.SESSION_AFFINITY_ENABLED = True
         self.SESSION_TTL_HOURS = 24
+        self.SESSION_MAX_SESSIONS = 1000
 
         # Model Defaults
         self.DEFAULT_TEMPERATURE = 0.8
@@ -108,6 +109,7 @@ class Settings:
                 "session.affinity_enabled": "SESSION_AFFINITY_ENABLED",
                 "session.id_header": "SESSION_ID_HEADER",
                 "session.ttl_hours": "SESSION_TTL_HOURS",
+                "session.max_sessions": "SESSION_MAX_SESSIONS",
                 "context.management_mode": "CONTEXT_MANAGEMENT_MODE",
                 "context.static_recent_keep": "CONTEXT_STATIC_RECENT_KEEP",
                 "context.dynamic_utilization_target": "CONTEXT_DYNAMIC_UTILIZATION_TARGET",
@@ -153,7 +155,7 @@ class Settings:
         # Behavioral
         self.CONTEXT_MANAGEMENT_MODE = os.getenv("CONTEXT_MANAGEMENT_MODE", self.CONTEXT_MANAGEMENT_MODE)
         self.GLOBAL_PROVIDER_LOCK = os.getenv("GLOBAL_PROVIDER_LOCK", str(self.GLOBAL_PROVIDER_LOCK)).lower() == "true"
-        
+
         # Paths
         self.REGISTRY_FILE = os.getenv("REGISTRY_FILE", self.REGISTRY_FILE)
 
