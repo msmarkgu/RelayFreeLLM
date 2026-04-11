@@ -99,7 +99,7 @@ SESSION_TTL_HOURS=24           # How long to keep affinity locks
 
 # --- Context Management ---
 # Modes: static, dynamic, reservoir, adaptive
-CONTEXT_MANAGEMENT_MODE=reservoir 
+CONTEXT_MANAGEMENT_MODE=reservoir
 CONTEXT_RESERVOIR_RECENT_KEEP=10  # Verbatim messages
 CONTEXT_RESERVOIR_SUMMARY_BUDGET=400 # Tokens for old history summary
 ```
