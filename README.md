@@ -2,7 +2,7 @@
 
 > **One endpoint. More free AI than any single provider. Less rate limit headaches.**
 
-Don't want to pay $~$$$/month to use AI Models? RelayFreeLLM can help. It is an open-source gateway that combines free tier model providers like Gemini, Groq, Mistral, Cerebras, and Ollama into a single OpenAI-compatible API—so you get aggregately more free inference with automatic failover.
+Don't want to pay $~$$$/month to use AI Models? RelayFreeLLM can help. It is an open-source gateway that combines free tier model providers like Gemini, Groq, Mistral, Cerebras, and Ollama into a single OpenAI-compatible API — so you get aggregately more free inference with automatic failover.
 
 ```
 # Your existing code works. Just change the URL.
@@ -18,7 +18,7 @@ No code changes. No retry logic. No 429 errors breaking your app.
 
 ### The Free Tier Problem
 
-Free AI APIs are useful—but using them directly can be painful:
+Free AI APIs are useful — but using them directly can be painful:
 
 ```
 ❌ Groq hits rate limit → Your app crashes
@@ -96,6 +96,9 @@ MODEL_STRATEGY=roundrobin      # options: roundrobin, random, weight
 # --- Session & Affinity ---
 SESSION_AFFINITY_ENABLED=True  # Pin sessions to providers
 SESSION_TTL_HOURS=24           # How long to keep affinity locks
+
+# --- HTTP Configuration ---
+REQUEST_TIMEOUT_SECONDS=60    # Timeout for all API requests (seconds)
 
 # --- Context Management ---
 # Modes: static, dynamic, reservoir, adaptive
@@ -368,21 +371,21 @@ curl http://localhost:8000/v1/usage
                               │ (with optional X-Session-ID)
         ┌─────────────────────▼───────────────────────────┐
         │              RelayFreeLLM Gateway               │
-        │  ┌───────────┐    ┌───────────┐    ┌──────────┐  │
-        │  │  Router   │───▶│Dispatcher │───▶│ContextMgr│  │
-        │  │ /v1/chat  │    │ (Retries) │    │(Summary) │  │
-        │  └───────────┘    └─────┬─────┘    └──────────┘  │
-        │                         │          ┌──────────┐  │
-        │                         └─────────▶│Affinity  │  │
-        │                                    │  Map     │  │
-        │                                    └──────────┘  │
+        │  ┌───────────┐    ┌───────────┐    ┌──────────┐ │
+        │  │  Router   │───▶│Dispatcher │───▶│ContextMgr│ │
+        │  │ /v1/chat  │    │ (Retries) │    │(Summary) │ │
+        │  └───────────┘    └─────┬─────┘    └──────────┘ │
+        │                         │          ┌──────────┐ │
+        │                         └─────────▶│Affinity  │ │
+        │                                    │  Map     │ │
+        │                                    └──────────┘ │
         └─────────────────────────┬───────────────────────┘
                                   │
-         ┌──────────┬──────────┬─────┴────┬──────────┬──────────┐
-         ▼          ▼          ▼          ▼          ▼          ▼
-    ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
-    │ Gemini │ │  Groq  │ │ Mistral│ │Cerebras│ │DeepSeek│ │ Ollama │
-    └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ └────────┘
+      ┌──────────┬──────────┬─────┴────┬──────────┬──────────┐
+      ▼          ▼          ▼          ▼          ▼          ▼
+ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
+ │ Gemini │ │  Groq  │ │ Mistral│ │Cerebras│ │DeepSeek│ │ Ollama │
+ └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ └────────┘
 ```
 
 ### Output Homogenization
@@ -452,7 +455,7 @@ PRs welcome.
 
 ## Acknowledgements
 
-Built with [FastAPI](https://fastapi.tiangolo.com/), [Pydantic](https://docs.pydantic.dev/), and [httpx](https://www.python-httpx.org/).
+Built with [FastAPI](https://fastapi.tiangolo.com/), [Pydantic](https://docs.pydantic.dev/), [httpx](https://www.python-httpx.org/), and AI coding tools.
 
 Powered by the generous free tiers of [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), [Mistral AI](https://mistral.ai/), [Cerebras](https://cerebras.ai/), and [Ollama](https://ollama.com/).
 
