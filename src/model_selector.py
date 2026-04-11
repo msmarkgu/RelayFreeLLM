@@ -71,11 +71,20 @@ class ModelSelector:
                         m["limits"],
                         model_type=m.get("type", metadata["type"]),
                         model_scale=m.get("scale", metadata["scale"]),
+                        max_context_length=m.get("Max_Context_Length", 4096),
                     )
                 )
             providers[provider_name] = ApiProvider(provider_name, models)
 
         return providers
+
+    def remove_provider(self, name: str) -> None:
+        """Remove an assigned provider if it fails implementation constraints."""
+        if name in self.providers:
+            del self.providers[name]
+        if name in self.provider_sequence:
+            self.provider_sequence.remove(name)
+        self.logger.info(f"Removed '{name}' from ModelSelector limits mapping.")
 
     def estimate_tokens(self, text):
         # Simplified token estimate: 1 word ≈ 1.3 tokens
@@ -223,6 +232,7 @@ class ModelSelector:
                         "type": model.model_type,
                         "scale": model.model_scale,
                         "limits": model.limits,
+                        "Max_Context_Length": model.max_context_length,
                     }
                 )
                 for limit_key in aggregate_limits:
@@ -345,6 +355,7 @@ class ModelSelector:
                         self.DEFAULT_LIMITS.copy(),
                         model_type=metadata["type"],
                         model_scale=metadata["scale"],
+                        max_context_length=4096,
                     )
                     provider.models.append(new_tracker)
 
@@ -363,6 +374,7 @@ class ModelSelector:
                         "type": model.model_type,
                         "scale": model.model_scale,
                         "limits": model.limits,
+                        "Max_Context_Length": model.max_context_length,
                     }
                 )
             data["providers"].append(prov_data)

@@ -15,7 +15,8 @@ class MistralClient(ApiInterface):
 
     def __init__(self):
         api_key = settings.get_api_key("MISTRAL_APIKEY")
-        self.client = Mistral(api_key=api_key)
+        timeout_ms = int(settings.REQUEST_TIMEOUT_SECONDS * 1000)
+        self.client = Mistral(api_key=api_key, timeout_ms=timeout_ms)
         self.logger = ProjectLogger.get_logger(__name__)
 
     async def list_models(self) -> list[str]:
@@ -28,14 +29,12 @@ class MistralClient(ApiInterface):
 
     async def call_model_api(
         self,
-        user_prompt: str = "introduce yourself",
+        messages: list[dict],
         model: str = "mistral-small-2507",
-        sys_instruct: str = "return answer in markdown",
         temperature: float = 0.8,
         max_tokens: int = 4000,
         stream: bool = False,
     ) -> str | object:
-        await asyncio.sleep(1)
 
         try:
             if stream:
@@ -43,10 +42,7 @@ class MistralClient(ApiInterface):
                 async def generate():
                     async_stream = await self.client.chat.stream_async(
                         model=model,
-                        messages=[
-                            {"role": "system", "content": sys_instruct},
-                            {"role": "user", "content": user_prompt},
-                        ],
+                        messages=messages,
                         temperature=temperature,
                         max_tokens=max_tokens,
                     )
@@ -59,10 +55,7 @@ class MistralClient(ApiInterface):
 
             chat_response = self.client.chat.complete(
                 model=model,
-                messages=[
-                    {"role": "system", "content": sys_instruct},
-                    {"role": "user", "content": user_prompt},
-                ],
+                messages=messages,
                 temperature=temperature,
                 top_p=1,
                 max_tokens=max_tokens,

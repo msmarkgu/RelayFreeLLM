@@ -94,34 +94,65 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
         chat_request = ChatCompletionRequest(**body)
         dispatcher = get_dispatcher(request)
 
+        # Read session ID from header (used by context manager for per-session history)
+        session_id = request.headers.get(settings.SESSION_ID_HEADER, "default")
+
+        # Extract conversation history (all messages except the last user message).
+        # Done here — before the stream/non-stream split — so both paths share it.
+        conversation_history = []
+        if len(chat_request.messages) > 1:
+            conversation_history = chat_request.messages[:-1]
+
         if not chat_request.stream:
-            result = await dispatcher.chat(chat_request)
+            result = await dispatcher.chat(
+                chat_request,
+                conversation_history=conversation_history,
+                session_id=session_id,
+            )
             return JSONResponse(content=result.model_dump(), status_code=200)
 
         # Handle Streaming
         async def stream_generator():
-            generator = await dispatcher.chat(chat_request)
             chat_id = f"chatcmpl-{uuid4().hex[:12]}"
             created = int(datetime.datetime.now().timestamp())
 
-            async for chunk in generator:
-                data = {
+            try:
+                generator = await dispatcher.chat(
+                    chat_request,
+                    conversation_history=conversation_history,
+                    session_id=session_id,
+                )
+
+                async for chunk in generator:
+                    data = {
+                        "id": chat_id,
+                        "object": "chat.completion.chunk",
+                        "created": created,
+                        "model": chat_request.model,
+                        "choices": [
+                            {
+                                "index": 0,
+                                "delta": {"content": chunk},
+                                "finish_reason": None,
+                            }
+                        ],
+                    }
+                    yield f"data: {json.dumps(data)}\n\n"
+
+                yield "data: [DONE]\n\n"
+
+            except Exception as e:
+                logger.error(f"Streaming error: {e}\n{traceback.format_exc()}")
+                error_data = {
                     "id": chat_id,
                     "object": "chat.completion.chunk",
                     "created": created,
                     "model": chat_request.model,
-                    "choices": [
-                        {
-                            "index": 0,
-                            "delta": {"content": chunk},
-                            "finish_reason": None,
-                        }
-                    ],
+                    "choices": [{"index": 0, "delta": {}, "finish_reason": "error"}],
+                    "error": {"message": str(e), "type": "streaming_error"},
                 }
-                yield f"data: {json.dumps(data)}\n\n"
-
-            # Final [DONE] message
-            yield "data: [DONE]\n\n"
+                yield f"data: {json.dumps(error_data)}\n\n"
+                yield "data: [DONE]\n\n"
 
         return StreamingResponse(stream_generator(), media_type="text/event-stream")
 

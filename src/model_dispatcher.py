@@ -8,6 +8,7 @@ and produces OpenAI-compatible responses.
 import asyncio
 import time
 import traceback
+from collections import defaultdict
 
 from .config import settings
 from .exceptions import (
@@ -21,12 +22,17 @@ from .models import (
     ChatCompletionResponse,
     build_response,
     build_error_response,
+    ChatMessage
 )
 from .model_selector import ModelSelector
 from .provider_registry import ProviderRegistry
 from .logging_util import ProjectLogger
 from .response_normalizer import ResponseNormalizer
 from .style_config import get_style_directive
+from .context_manager import ContextManager
+from .config import settings
+from typing import List, Optional
+import asyncio
 
 
 class ModelDispatcher:
@@ -41,21 +47,19 @@ class ModelDispatcher:
         self.usage_tracker = usage_tracker
         self.logger = ProjectLogger.get_logger(__name__)
         self.normalizer = ResponseNormalizer()
+        self.context_manager = ContextManager()
 
-        # Sync: only keep providers in the selector that the registry can serve
-        registered = set(registry.list_providers())
-        selector_provs = list(selector.provider_sequence)
-        removed = [p for p in selector_provs if p not in registered]
-        if removed:
-            self.logger.warning(
-                f"Removing unregistered providers from selector: {removed}"
-            )
-            selector.provider_sequence = [p for p in selector_provs if p in registered]
+        self.session_affinity_map = {}
+        self.affinity_lock = asyncio.Lock()
+        self.provider_locks = defaultdict(asyncio.Lock)
 
     # ── Primary "meta model" entry point (OpenAI-compatible) ────────
 
     async def chat(
-        self, request: ChatCompletionRequest
+        self,
+        request: ChatCompletionRequest,
+        conversation_history: Optional[List[ChatMessage]] = None,
+        session_id: str = "default",
     ) -> ChatCompletionResponse | object:
         """
         The meta model's main entry point.
@@ -64,6 +68,11 @@ class ModelDispatcher:
         a provider, call it, and retry on failure with a different provider.
 
         Supports filtering by model_type and model_scale when model is "meta-model".
+
+        Args:
+            request: The chat completion request
+            conversation_history: Optional list of previous messages for context
+            session_id: Client session identifier (from X-Session-ID header)
         """
         user_prompt = request.get_user_prompt()
         sys_prompt = request.get_system_prompt()
@@ -100,6 +109,8 @@ class ModelDispatcher:
                     max_tokens=max_tokens,
                     response_format=response_format,
                     stream=stream,
+                    conversation_history=conversation_history,
+                    session_id=session_id,
                 )
                 latency_ms = (time.time() - start_time) * 1000
 
@@ -134,15 +145,42 @@ class ModelDispatcher:
         exclude_providers: list[str] = []
         last_error = ""
 
+        # Determine affinity
+        preferred_provider = None
+        affinity_model_name = request.model_name
+
+        if settings.SESSION_AFFINITY_ENABLED and session_id != "default":
+            async with self.affinity_lock:
+                now = time.time()
+                # Prune expired sessions
+                expired = [sid for sid, data in self.session_affinity_map.items() if now - data["last_active"] > settings.SESSION_TTL_HOURS * 3600]
+                for sid in expired:
+                    del self.session_affinity_map[sid]
+
+            # Safety net: limit map size to prevent unbounded growth
+            max_sessions = settings.SESSION_MAX_SESSIONS
+            if len(self.session_affinity_map) > max_sessions:
+                sorted_sessions = sorted(self.session_affinity_map.items(), key=lambda x: x[1]["last_active"])
+                sessions_to_remove = sorted_sessions[:len(self.session_affinity_map) - max_sessions + 100]
+                for sid, _ in sessions_to_remove:
+                    del self.session_affinity_map[sid]
+                self.logger.info(f"Pruned {len(sessions_to_remove)} sessions due to size limit")
+
+                if session_id in self.session_affinity_map:
+                    data = self.session_affinity_map[session_id]
+                    preferred_provider = data["provider"]
+                    affinity_model_name = data["model"]
+
         while attempt < max_retries:
             try:
                 provider_name, model_name, wait_time = self.selector.select(
                     user_prompt,
                     sys_prompt,
+                    preferred_provider=preferred_provider if attempt == 0 else None,
                     exclude_providers=exclude_providers.copy(),
                     model_type=request.model_type,
                     model_scale=request.model_scale,
-                    model_name=request.model_name,
+                    model_name=affinity_model_name if (attempt == 0 and preferred_provider) else request.model_name,
                 )
 
                 if wait_time > 0:
@@ -174,10 +212,20 @@ class ModelDispatcher:
                     temperature=temperature,
                     max_tokens=max_tokens,
                     stream=stream,
+                    conversation_history=conversation_history,
+                    session_id=session_id,
                 )
                 latency_ms = (time.time() - start_time) * 1000
 
                 if stream:
+                    # Update Session Affinity on successful stream start
+                    if settings.SESSION_AFFINITY_ENABLED and session_id != "default":
+                        async with self.affinity_lock:
+                            self.session_affinity_map[session_id] = {
+                                "provider": provider_name,
+                                "model": model_name,
+                                "last_active": time.time()
+                            }
                     return model_resp  # It's an AsyncGenerator
 
                 if self.usage_tracker:
@@ -187,6 +235,15 @@ class ModelDispatcher:
                         self.selector.estimate_tokens(user_prompt),
                         self.selector.estimate_tokens(model_resp),
                     )
+
+                # Update Session Affinity on success
+                if settings.SESSION_AFFINITY_ENABLED and session_id != "default":
+                    async with self.affinity_lock:
+                        self.session_affinity_map[session_id] = {
+                            "provider": provider_name,
+                            "model": model_name,
+                            "last_active": time.time()
+                        }
 
                 return build_response(
                     content=model_resp,
@@ -248,35 +305,140 @@ class ModelDispatcher:
         max_tokens: int = None,
         response_format: object = None,
         stream: bool = False,
+        conversation_history: Optional[List[ChatMessage]] = None,
+        session_id: str = "default",
     ) -> str | object:
-        """Call a specific provider's model API."""
+        """
+        Call a specific provider's model API.
+
+        Args:
+            provider_name: Name of the provider to call
+            model_name: Name of the model to use
+            user_prompt: Current user message
+            system_prompt: System prompt
+            temperature: Model temperature
+            max_tokens: Max tokens to generate
+            response_format: Response format (e.g., JSON)
+            stream: Whether to stream the response
+            conversation_history: Optional list of previous messages for context
+            session_id: Client session identifier for context tracking
+        """
         self.logger.info(f"Calling {provider_name} model: {model_name} (stream={stream})")
 
         api_client = self.registry.get_client(provider_name)
-
-        full_sys_prompt = f"{system_prompt}\n\n{settings.STANDARD_SYSTEM_PROMPT}"
 
         response_format_dict = None
         if response_format:
             response_format_dict = {"type": getattr(response_format, "type", None)}
 
         style_directive = get_style_directive(response_format_dict)
-        full_sys_prompt = f"{full_sys_prompt}\n\n{style_directive}"
+        base_sys_prompt = f"{system_prompt}\n\n{settings.STANDARD_SYSTEM_PROMPT}\n\n{style_directive}"
 
-        model_resp = await api_client.call_model_api(
-            user_prompt=user_prompt,
-            model=model_name,
-            sys_instruct=full_sys_prompt,
-            temperature=temperature or settings.DEFAULT_TEMPERATURE,
-            max_tokens=max_tokens or settings.DEFAULT_MAX_TOKENS,
-            stream=stream,
-        )
+        # Context Management: Select what portion of conversation history to send
+        context_messages = []
+        if conversation_history and len(conversation_history) > 0:
+            # Calculate target context size based on provider/model limits
+            target_context_tokens = self._calculate_target_context_tokens(
+                provider_name, model_name, max_tokens
+            )
+
+            # Use context manager to select appropriate portion of history
+            selected_history = self.context_manager.select_context_for_request(
+                conversation_history,
+                session_id=session_id,
+                target_context_tokens=target_context_tokens
+            )
+
+            # Convert to message format for API
+            context_messages = [
+                {"role": msg.role, "content": msg.content}
+                for msg in selected_history
+            ]
+
+            self.logger.debug(
+                f"Context management: selected {len(selected_history)} of "
+                f"{len(conversation_history)} messages for context"
+            )
+
+        # Build complete message list: [context] + [current user message]
+        messages = []
+
+        # Add system prompt if present
+        if system_prompt:
+            messages.append({"role": "system", "content": base_sys_prompt})
+
+        # Add context messages
+        messages.extend(context_messages)
+
+        # Add current user message
+        messages.append({"role": "user", "content": user_prompt})
+
+        # Global Provider Lock: Optional serialization per provider
+        if settings.GLOBAL_PROVIDER_LOCK:
+            self.logger.info(f"Global lock enabled. Waiting for {provider_name} lock...")
+            async with self.provider_locks[provider_name]:
+                model_resp = await api_client.call_model_api(
+                    messages=messages,
+                    model=model_name,
+                    temperature=temperature or settings.DEFAULT_TEMPERATURE,
+                    max_tokens=max_tokens or settings.DEFAULT_MAX_TOKENS,
+                    stream=stream,
+                )
+        else:
+            model_resp = await api_client.call_model_api(
+                messages=messages,
+                model=model_name,
+                temperature=temperature or settings.DEFAULT_TEMPERATURE,
+                max_tokens=max_tokens or settings.DEFAULT_MAX_TOKENS,
+                stream=stream,
+            )
+
+        # Update usage tracking for context (for dynamic mode)
+        if context_messages:
+            context_tokens = self.selector.estimate_tokens(
+                " ".join(m["content"] for m in context_messages)
+            )
+            self.context_manager.update_usage(session_id, context_tokens)
 
         if not stream:
             normalized_resp = self.normalizer.normalize(model_resp, response_format_dict)
             self.logger.debug(f"Model response:\n{normalized_resp}")
             return normalized_resp
         return model_resp
+
+    def _calculate_target_context_tokens(
+        self,
+        provider_name: str,
+        model_name: str,
+        max_tokens: Optional[int]
+    ) -> int:
+        """
+        Calculate how many tokens we can use for context.
+
+        Args:
+            provider_name: Name of the provider
+            model_name: Name of the model
+            max_tokens: Max tokens reserved for response
+
+        Returns:
+            Maximum tokens available for context
+        """
+        max_context = 4096
+        provider = self.selector.providers.get(provider_name)
+        if provider:
+            for model in provider.models:
+                if model.model_name == model_name:
+                    max_context = model.max_context_length
+                    break
+
+
+        # Reserve space for response and overhead
+        response_reserve = settings.DEFAULT_MAX_TOKENS if max_tokens is None else max_tokens
+        system_overhead = 500  # System prompts, style guides
+        safety_margin = 100    # Extra buffer
+
+        target_context = max(0, max_context - response_reserve - system_overhead - safety_margin)
+        return target_context
 
     # ── Model discovery ─────────────────────────────────────────────
 

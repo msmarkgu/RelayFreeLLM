@@ -27,7 +27,7 @@ class DeepSeekClient(ApiInterface):
             "Content-Type": "application/json"
         }
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT_SECONDS) as client:
                 response = await client.get(
                     f"{self.base_url}/models",
                     headers=headers
@@ -43,9 +43,8 @@ class DeepSeekClient(ApiInterface):
             return []
 
     async def call_model_api(self, 
-                             user_prompt="introduce yourself", 
+                             messages: list[dict],
                              model="deepseek-chat", 
-                             sys_instruct="return answer in markdown", 
                              temperature=0.7, 
                              max_tokens=4000) -> str:
         await asyncio.sleep(0.5)
@@ -57,17 +56,14 @@ class DeepSeekClient(ApiInterface):
 
         payload = {
             "model": model,
-            "messages": [
-                {"role": "system", "content": sys_instruct},
-                {"role": "user", "content": user_prompt}
-            ],
+            "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
             "stream": False
         }
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT_SECONDS) as client:
                 response = await client.post(
                     f"{self.base_url}/chat/completions",
                     headers=headers,

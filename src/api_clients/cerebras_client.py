@@ -15,7 +15,7 @@ class CerebrasClient(ApiInterface):
 
     def __init__(self):
         api_key = settings.get_api_key("CEREBRAS_APIKEY")
-        self.client = Cerebras(api_key=api_key)
+        self.client = Cerebras(api_key=api_key, timeout=settings.REQUEST_TIMEOUT_SECONDS)
         self.logger = ProjectLogger.get_logger(__name__)
 
     async def list_models(self) -> list[str]:
@@ -28,24 +28,19 @@ class CerebrasClient(ApiInterface):
 
     async def call_model_api(
         self,
-        user_prompt: str = "introduce yourself",
+        messages: list[dict],
         model: str = "gpt-oss-120b",
-        sys_instruct: str = "return answer in markdown",
         temperature: float = 0.8,
         max_tokens: int = 4000,
         stream: bool = False,
     ) -> str | object:
-        await asyncio.sleep(1)
 
         try:
             if stream:
 
                 async def generate():
                     stream_resp = self.client.chat.completions.create(
-                        messages=[
-                            {"role": "system", "content": sys_instruct},
-                            {"role": "user", "content": user_prompt},
-                        ],
+                        messages=messages,
                         model=model,
                         temperature=temperature,
                         max_completion_tokens=max_tokens,
@@ -58,10 +53,7 @@ class CerebrasClient(ApiInterface):
                 return generate()
 
             chat_completion = self.client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": sys_instruct},
-                    {"role": "user", "content": user_prompt},
-                ],
+                messages=messages,
                 model=model,
                 temperature=0.5,
                 max_completion_tokens=max_tokens,

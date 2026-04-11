@@ -27,6 +27,12 @@ class ProviderRegistry:
         self._clients[name] = client
         logger.info(f"Registered provider: {name}")
 
+    def unregister(self, name: str) -> None:
+        """Remove a completely registered client."""
+        if name in self._clients:
+            del self._clients[name]
+            logger.info(f"Unregistered provider: {name}")
+
     def get_client(self, name: str) -> ApiInterface:
         """Get a registered client by provider name."""
         if name not in self._clients:

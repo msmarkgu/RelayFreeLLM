@@ -17,6 +17,8 @@ class GeminiClient(ApiInterface):
 
     def __init__(self):
         api_key = settings.get_api_key("GEMINI_APIKEY")
+        # Note: http_options.timeout doesn't apply to all SDK internal calls
+        # Keep original client config without custom timeout
         self.client = genai.Client(api_key=api_key)
         self.logger = ProjectLogger.get_logger(__name__)
 
@@ -31,18 +33,33 @@ class GeminiClient(ApiInterface):
 
     async def call_model_api(
         self,
-        user_prompt: str = "introduce yourself",
+        messages: list[dict],
         model: str = "gemini-2.5-pro",
-        sys_instruct: str = "return answer in markdown",
         temperature: float = 0.8,
         max_tokens: int = 4000,
         stream: bool = False,
     ) -> str | object:
-        await asyncio.sleep(1)
 
         try:
+            sys_instruct = ""
+            gemini_contents = []
+            
+            for msg in messages:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")
+                if role == "system":
+                    sys_instruct += content + "\n"
+                else:
+                    gemini_role = "model" if role == "assistant" else role
+                    gemini_contents.append(
+                        types.Content(
+                            role=gemini_role,
+                            parts=[types.Part.from_text(text=content)]
+                        )
+                    )
+                    
             config = types.GenerateContentConfig(
-                system_instruction=sys_instruct,
+                system_instruction=sys_instruct.strip() if sys_instruct else None,
                 max_output_tokens=max_tokens,
                 top_k=1,
                 top_p=0.8,
@@ -56,7 +73,7 @@ class GeminiClient(ApiInterface):
 
                 async def generate():
                     async for response in await self.client.aio.models.generate_content_stream(
-                        model=model, contents=user_prompt, config=config
+                        model=model, contents=gemini_contents, config=config
                     ):
                         if response.text:
                             yield response.text
@@ -64,7 +81,7 @@ class GeminiClient(ApiInterface):
                 return generate()
 
             response = await self.client.aio.models.generate_content(
-                model=model, contents=user_prompt, config=config
+                model=model, contents=gemini_contents, config=config
             )
             return response.text
 

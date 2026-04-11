@@ -45,9 +45,11 @@ class TestOllamaClient(unittest.IsolatedAsyncioTestCase):
         mock_post.return_value = mock_response
 
         response = await self.client.call_model_api(
-            user_prompt="Hi",
+            messages=[
+                {"role": "system", "content": "Be helpful"},
+                {"role": "user", "content": "Hi"}
+            ],
             model="llama3",
-            sys_instruct="Be helpful",
             temperature=0.7,
             max_tokens=100
         )
@@ -76,9 +78,11 @@ class TestOllamaClient(unittest.IsolatedAsyncioTestCase):
         mock_stream.return_value = AsyncContextMock()
 
         generator = await self.client.call_model_api(
-            user_prompt="Hi",
+            messages=[
+                {"role": "system", "content": "Be helpful"},
+                {"role": "user", "content": "Hi"}
+            ],
             model="llama3",
-            sys_instruct="Be helpful",
             temperature=0.7,
             max_tokens=100,
             stream=True

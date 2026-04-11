@@ -33,7 +33,7 @@ class CloudflareClient(ApiInterface):
         }
 
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT_SECONDS) as client:
                 response = await client.get(url, headers=headers)
                 response.raise_for_status()
                 data = response.json()
@@ -48,9 +48,8 @@ class CloudflareClient(ApiInterface):
             return []
 
     async def call_model_api(self, 
-                             user_prompt="introduce yourself", 
+                             messages: list[dict], 
                              model="@cf/meta/llama-3.1-8b-instruct", 
-                             sys_instruct="return answer in markdown", 
                              temperature=0.8, 
                              max_tokens=2048) -> str:
         if not self.api_token or not self.account_id:
@@ -63,17 +62,15 @@ class CloudflareClient(ApiInterface):
         }
 
         payload = {
-            "messages": [
-                {"role": "system", "content": sys_instruct},
-                {"role": "user", "content": user_prompt}
-            ],
+            "messages": messages,
+
             "model": model,
             "temperature": temperature,
             "max_tokens": max_tokens
         }
 
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT_SECONDS) as client:
                 await asyncio.sleep(0.5)
                 
                 response = await client.post(url, headers=headers, json=payload, timeout=60.0)
