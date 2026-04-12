@@ -94,9 +94,9 @@ OLLAMA_BASE_URL=http://localhost:11434
 
 **Note:** All other settings (context management, session affinity, HTTP timeout, etc.) are configured in `settings.json`.
 
-### 3. Configure Model Limits (Optional)
+### 3. Edit Model Limits (Optional)
 
-Edit `provider_model_limits.json` to customize rate limits for each model. Default values work for most use cases.
+Edit [`provider_model_limits.json`](src/provider_model_limits.json) to update rate limits for each model. Default values work for most use cases.
 
 ```json
 {
@@ -140,7 +140,7 @@ Edit `provider_model_limits.json` to customize rate limits for each model. Defau
 
 **Adding a new provider:** To add a new provider, create a new client in `src/api_clients/` and add its models/limits to this file. See existing providers for the JSON structure.
 
-**Automation coming soon:** A CLI tool to auto-fetch model limits from provider documentation is planned. This will make Step 3 fully automatic.
+**Automation coming soon:** A CLI tool to auto-fetch / auto-refresh model limits from provider documentation is planned. This will make Step 3 fully automatic.
 
 ### 4. Verify connectivity (optional but recommended)
 ```bash
