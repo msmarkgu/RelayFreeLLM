@@ -94,7 +94,55 @@ OLLAMA_BASE_URL=http://localhost:11434
 
 **Note:** All other settings (context management, session affinity, HTTP timeout, etc.) are configured in `settings.json`.
 
-### 3. Verify connectivity (optional but recommended)
+### 3. Configure Model Limits (Optional)
+
+Edit `provider_model_limits.json` to customize rate limits for each model. Default values work for most use cases.
+
+```json
+{
+  "providers": [
+    {
+      "name": "Groq",
+      "models": [
+        {
+          "name": "llama-3.3-70b-versatile",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 1800,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 12000,
+            "tokens_per_hour": 30000,
+            "tokens_per_day": 100000
+          },
+          "max_context_length": 131072
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Inferring limits:** Providers often only document some limits (e.g., only RPM and TPM). Infer the others:
+- `requests_per_hour ≈ requests_per_minute × 60`
+- `requests_per_day ≈ requests_per_hour × 24`
+- Same pattern for token limits
+
+| Provider | Documentation URL |
+|----------|-------------------|
+| Groq | https://console.groq.com/docs/models |
+| Mistral | https://docs.mistral.ai/deployment/ai-studio/tier |
+| Cerebras | https://inference-docs.cerebras.ai/support/rate-limits |
+| Gemini | https://ai.google.dev/gemini-api/docs/rate-limits |
+| DeepSeek | https://api-docs.deepseek.com/quick_start/rate_limit |
+
+**Note:** Rate limits vary by account tier. Default values work for most use cases.
+
+**Adding a new provider:** To add a new provider, create a new client in `src/api_clients/` and add its models/limits to this file. See existing providers for the JSON structure.
+
+**Automation coming soon:** A CLI tool to auto-fetch model limits from provider documentation is planned. This will make Step 3 fully automatic.
+
+### 4. Verify connectivity (optional but recommended)
 ```bash
 python -m tests.test_models_availability
 ```
@@ -127,7 +175,7 @@ TOTAL: 17/17 models available.
 ==================================================
 ```
 
-### 4. Start the Server
+### 5. Start the Server
 
 ```bash
 python -m src.server
@@ -148,7 +196,7 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 
 ```
 
-### 5. Use it
+### 6. Use it
 
 **Python SDK:**
 ```python
