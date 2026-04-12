@@ -81,31 +81,18 @@ pip install -r requirements.txt
 Create a `.env` file:
 
 ```bash
-# --- Providers ---
+# --- Providers (Required) ---
 GEMINI_APIKEY=      # ai.google.dev
 GROQ_APIKEY=        # console.groq.com
 MISTRAL_APIKEY=     # console.mistral.ai
 CEREBRAS_APIKEY=    # cloud.cerebras.ai
-DEEPSEEK_APIKEY=    # Optional
-OLLAMA_BASE_URL=http://localhost:11434  # Optional
 
-# --- Selection Strategies ---
-PROVIDER_STRATEGY=roundrobin   # options: roundrobin, random, weight
-MODEL_STRATEGY=roundrobin      # options: roundrobin, random, weight
-
-# --- Session & Affinity ---
-SESSION_AFFINITY_ENABLED=True  # Pin sessions to providers
-SESSION_TTL_HOURS=24           # How long to keep affinity locks
-
-# --- HTTP Configuration ---
-REQUEST_TIMEOUT_SECONDS=60    # Timeout for all API requests (seconds)
-
-# --- Context Management ---
-# Modes: static, dynamic, reservoir, adaptive
-CONTEXT_MANAGEMENT_MODE=reservoir
-CONTEXT_RESERVOIR_RECENT_KEEP=10  # Verbatim messages
-CONTEXT_RESERVOIR_SUMMARY_BUDGET=400 # Tokens for old history summary
+# --- Optional Providers ---
+DEEPSEEK_APIKEY=
+OLLAMA_BASE_URL=http://localhost:11434
 ```
+
+**Note:** All other settings (context management, session affinity, HTTP timeout, etc.) are configured in `settings.json`.
 
 ### 3. Verify connectivity (optional but recommended)
 ```bash
@@ -118,10 +105,11 @@ Depending on your providers, the result should look like:
 ==================================================
 MODEL AVAILABILITY SUMMARY
 ==================================================
-✅ PASS | Groq         | llama-3.2-3b-preview                     | Success
-✅ PASS | Groq         | llama-3.2-11b-vision-preview             | Success
-✅ PASS | Groq         | llama-3.2-90b-vision-preview             | Success
-✅ PASS | Groq         | llama-3.1-405b-reasoning                 | Success
+✅ PASS | Cerebras     | qwen-3-235b-a22b-instruct-2507           | Success
+✅ PASS | Groq         | llama-3.3-70b-versatile                  | Success
+✅ PASS | Groq         | qwen/qwen3-32b                           | Success
+✅ PASS | Groq         | openai/gpt-oss-20b                       | Success
+✅ PASS | Groq         | openai/gpt-oss-120b                      | Success
 ✅ PASS | Groq         | moonshotai/kimi-k2-instruct-0905         | Success
 ✅ PASS | Groq         | moonshotai/kimi-k2-instruct              | Success
 ✅ PASS | Groq         | groq/compound                            | Success
@@ -136,7 +124,7 @@ MODEL AVAILABILITY SUMMARY
 ✅ PASS | Gemini       | gemini-2.5-flash                         | Success
 ==================================================
 TOTAL: 17/17 models available.
-
+==================================================
 ```
 
 ### 4. Start the Server

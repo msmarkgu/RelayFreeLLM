@@ -2,35 +2,57 @@
   "session": {
     "affinity_enabled": true,
     "id_header": "X-Session-ID",
+
+    "__ttl_hours_comment": "How long to keep session affinity (in hours)",
     "ttl_hours": 24,
+
+    "__max_sessions_comment": "Max sessions to keep in memory before pruning",
     "max_sessions": 1000
   },
-  
+
   "context": {
-    "_management_mode_options": "Available modes: static, dynamic, reservoir, adaptive, disabled",
-    "management_mode": "static",
+    "__management_mode_options": "Available modes: static, dynamic, reservoir, adaptive, disabled",
+    "management_mode": "reservoir",
+
+    "__static_recent_keep_comment": "Number of recent messages to keep verbatim",
     "static_recent_keep": 10,
+
+    "__dynamic_utilization_target_comment": "Target % of context tokens to aim for",
     "dynamic_utilization_target": 0.8,
+
+    "__dynamic_min_utilization_comment": "Minimum % of context tokens to use",
     "dynamic_min_utilization": 0.3,
+
+    "__dynamic_max_boost_comment": "Maximum multiplier for dynamic boost",
     "dynamic_max_boost": 1.5,
+
+    "__reservoir_recent_keep_comment": "Recent messages to keep verbatim in reservoir mode",
     "reservoir_recent_keep": 15,
+
+    "__reservoir_summary_budget_comment": "Token budget for summarization in reservoir mode",
     "reservoir_summary_budget": 400
   },
-  
+
   "summarization": {
     "enabled": true,
     "mode": "extractive",
+
+    "__max_tokens_comment": "Max tokens for generated summary",
     "max_tokens": 200,
+
+    "__timeout_ms_comment": "Timeout for summarization in milliseconds",
     "timeout_ms": 2000,
+
     "fallback_to_extractive": true
   },
-  
+
   "routing": {
     "global_provider_lock": true,
-    "comment": "It ensures only one request is sent to a specific provider at a time, eliminating 429 errors without needing static timers."
+    "__comment": "Ensures only one request per provider at a time, eliminates 429 errors"
   },
-  
+
   "http": {
-    "timeout_seconds": 60
+    "timeout_seconds": 60,
+    "__timeout_seconds_comment": "HTTP request timeout in seconds"
   }
 }
