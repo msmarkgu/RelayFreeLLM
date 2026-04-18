@@ -2,7 +2,7 @@
 
 > **One endpoint. More free AI than any single provider. Less rate limit headaches.**
 
-Don't want to pay $~$$$/month to use AI Models? RelayFreeLLM can help. It is an open-source gateway that combines free tier model providers like Gemini, Groq, Mistral, Cerebras, and Ollama into a single OpenAI-compatible API — so you get aggregately more free inference with automatic failover.
+Don't want to pay $$/month to use AI Models? RelayFreeLLM can help. It is an open-source gateway that combines free tier model providers like Gemini, Groq, Mistral, Cerebras, and Ollama into a single OpenAI-compatible API — so you get aggregately more free inference with automatic failover.
 
 ```
 # Your existing code works. Just change the URL.
