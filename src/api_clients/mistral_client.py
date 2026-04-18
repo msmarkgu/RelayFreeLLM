@@ -1,7 +1,7 @@
 import asyncio
 import traceback
 
-from mistralai import Mistral
+from mistralai.client import Mistral
 
 from ..config import settings
 from ..exceptions import ProviderError, RateLimitError, AuthenticationError
