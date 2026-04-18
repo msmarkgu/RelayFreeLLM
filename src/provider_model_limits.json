@@ -10,7 +10,7 @@
           "scale": "large",
           "limits": {
             "requests_per_second": 1,
-            "requests_per_minute": 30,
+            "requests_per_minute": 5,
             "requests_per_hour": 900,
             "requests_per_day": 14400,
             "tokens_per_minute": 30000,
@@ -60,11 +60,11 @@
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
-            "requests_per_hour": 300,
-            "requests_per_day": 8000,
-            "tokens_per_minute": 12000,
-            "tokens_per_hour": 30000,
-            "tokens_per_day": 100000
+            "requests_per_hour": 100,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 8000,
+            "tokens_per_hour": 20000,
+            "tokens_per_day": 200000
           }
         },
         {
@@ -74,39 +74,25 @@
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
-            "requests_per_hour": 300,
-            "requests_per_day": 8000,
-            "tokens_per_minute": 12000,
-            "tokens_per_hour": 30000,
-            "tokens_per_day": 100000
+            "requests_per_hour": 100,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 8000,
+            "tokens_per_hour": 20000,
+            "tokens_per_day": 200000
           }
         },
         {
-          "name": "moonshotai/kimi-k2-instruct-0905",
+          "name": "openai/gpt-oss-safeguard-20b",
           "type": "text",
-          "scale": "large",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
-            "requests_per_minute": 60,
-            "requests_per_hour": 300,
+            "requests_per_minute": 30,
+            "requests_per_hour": 100,
             "requests_per_day": 1000,
-            "tokens_per_minute": 10000,
-            "tokens_per_hour": 30000,
-            "tokens_per_day": 300000
-          }
-        },
-        {
-          "name": "moonshotai/kimi-k2-instruct",
-          "type": "text",
-          "scale": "large",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 60,
-            "requests_per_hour": 300,
-            "requests_per_day": 1000,
-            "tokens_per_minute": 10000,
-            "tokens_per_hour": 30000,
-            "tokens_per_day": 300000
+            "tokens_per_minute": 8000,
+            "tokens_per_hour": 20000,
+            "tokens_per_day": 200000
           }
         },
         {

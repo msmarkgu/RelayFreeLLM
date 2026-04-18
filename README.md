@@ -118,12 +118,12 @@ Depending on your providers, the result should look like:
 ==================================================
 MODEL AVAILABILITY SUMMARY
 ==================================================
-✅ PASS | Groq         | llama-3.2-3b-preview                     | Success
-✅ PASS | Groq         | llama-3.2-11b-vision-preview             | Success
-✅ PASS | Groq         | llama-3.2-90b-vision-preview             | Success
-✅ PASS | Groq         | llama-3.1-405b-reasoning                 | Success
-✅ PASS | Groq         | moonshotai/kimi-k2-instruct-0905         | Success
-✅ PASS | Groq         | moonshotai/kimi-k2-instruct              | Success
+✅ PASS | Cerebras     | qwen-3-235b-a22b-instruct-2507           | Success
+✅ PASS | Groq         | llama-3.3-70b-versatile                  | Success
+✅ PASS | Groq         | qwen/qwen3-32b                           | Success
+✅ PASS | Groq         | openai/gpt-oss-20b                       | Success
+✅ PASS | Groq         | openai/gpt-oss-120b                      | Success
+✅ PASS | Groq         | openai/gpt-oss-safeguard-20b             | Success
 ✅ PASS | Groq         | groq/compound                            | Success
 ✅ PASS | Mistral      | mistral-large-latest                     | Success
 ✅ PASS | Mistral      | mistral-medium-latest                    | Success
@@ -135,8 +135,8 @@ MODEL AVAILABILITY SUMMARY
 ✅ PASS | Mistral      | codestral-2508                           | Success
 ✅ PASS | Gemini       | gemini-2.5-flash                         | Success
 ==================================================
-TOTAL: 17/17 models available.
-
+TOTAL: 16/16 models available.
+==================================================
 ```
 
 ### 4. Start the Server

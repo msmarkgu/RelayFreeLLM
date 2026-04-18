@@ -1,7 +1,7 @@
 import asyncio
 import traceback
 
-from mistralai.client import Mistral
+from mistralai import Mistral
 
 from ..config import settings
 from ..exceptions import ProviderError, RateLimitError, AuthenticationError
@@ -10,7 +10,6 @@ from .api_interface import ApiInterface
 
 
 class MistralClient(ApiInterface):
-
     PROVIDER_NAME = "Mistral"
 
     def __init__(self):
