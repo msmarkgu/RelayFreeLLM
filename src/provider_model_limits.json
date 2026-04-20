@@ -295,26 +295,26 @@
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
-            "requests_per_hour": 100,
-            "requests_per_day": 1000,
-            "tokens_per_minute": 4000,
-            "tokens_per_hour": 10000,
-            "tokens_per_day": 100000
+            "requests_per_hour": 1500,
+            "requests_per_day": 30000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
           },
           "Max_Context_Length": 131072
         },
         {
-          "name": "meta/llama-4-maverick-17b-128e-instruct",
-          "type": "text",
+          "name": "z-ai/glm4.7",
+          "type": "coding",
           "scale": "large",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
-            "requests_per_hour": 100,
-            "requests_per_day": 1000,
-            "tokens_per_minute": 4000,
-            "tokens_per_hour": 10000,
-            "tokens_per_day": 100000
+            "requests_per_hour": 1500,
+            "requests_per_day": 30000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
           },
           "Max_Context_Length": 131072
         },
@@ -325,26 +325,11 @@
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
-            "requests_per_hour": 100,
-            "requests_per_day": 1000,
-            "tokens_per_minute": 4000,
-            "tokens_per_hour": 10000,
-            "tokens_per_day": 100000
-          },
-          "Max_Context_Length": 131072
-        },
-        {
-          "name": "mistralai/mistral-large-3-675b-instruct-2512",
-          "type": "text",
-          "scale": "large",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 30,
-            "requests_per_hour": 100,
-            "requests_per_day": 1000,
-            "tokens_per_minute": 4000,
-            "tokens_per_hour": 10000,
-            "tokens_per_day": 100000
+            "requests_per_hour": 1500,
+            "requests_per_day": 30000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
           },
           "Max_Context_Length": 131072
         },
@@ -355,11 +340,26 @@
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
-            "requests_per_hour": 100,
-            "requests_per_day": 1000,
-            "tokens_per_minute": 4000,
-            "tokens_per_hour": 10000,
-            "tokens_per_day": 100000
+            "requests_per_hour": 1500,
+            "requests_per_day": 30000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 131072
+        },
+        {
+          "name": "qwen/qwen3-coder-480b-a35b-instruct",
+          "type": "coding",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 1500,
+            "requests_per_day": 30000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
           },
           "Max_Context_Length": 131072
         }
