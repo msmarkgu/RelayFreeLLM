@@ -283,6 +283,87 @@
           }
         }
       ]
+    },
+    {
+      "name": "Nvidia",
+      "url": "https://build.nvidia.com/explore/discover/models",
+      "models": [
+        {
+          "name": "moonshotai/kimi-k2-instruct",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 100,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 4000,
+            "tokens_per_hour": 10000,
+            "tokens_per_day": 100000
+          },
+          "Max_Context_Length": 131072
+        },
+        {
+          "name": "meta/llama-4-maverick-17b-128e-instruct",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 100,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 4000,
+            "tokens_per_hour": 10000,
+            "tokens_per_day": 100000
+          },
+          "Max_Context_Length": 131072
+        },
+        {
+          "name": "stepfun-ai/step-3.5-flash",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 100,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 4000,
+            "tokens_per_hour": 10000,
+            "tokens_per_day": 100000
+          },
+          "Max_Context_Length": 131072
+        },
+        {
+          "name": "mistralai/mistral-large-3-675b-instruct-2512",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 100,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 4000,
+            "tokens_per_hour": 10000,
+            "tokens_per_day": 100000
+          },
+          "Max_Context_Length": 131072
+        },
+        {
+          "name": "google/gemma-3-27b-it",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 100,
+            "requests_per_day": 1000,
+            "tokens_per_minute": 4000,
+            "tokens_per_hour": 10000,
+            "tokens_per_day": 100000
+          },
+          "Max_Context_Length": 131072
+        }
+      ]
     }
   ]
 }

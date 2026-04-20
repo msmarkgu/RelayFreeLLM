@@ -32,6 +32,7 @@ class Settings:
         self.MISTRAL_APIKEY = ""
         self.CEREBRAS_APIKEY = ""
         self.DEEPSEEK_APIKEY = ""
+        self.NVIDIA_APIKEY = ""
         self.CLOUDFLARE_API_TOKEN = ""
         self.CLOUDFLARE_ACCOUNT_ID = ""
         self.OLLAMA_BASE_URL = "http://localhost:11434"
@@ -151,6 +152,7 @@ class Settings:
         self.MISTRAL_APIKEY = os.getenv("MISTRAL_APIKEY", self.MISTRAL_APIKEY)
         self.CEREBRAS_APIKEY = os.getenv("CEREBRAS_APIKEY", self.CEREBRAS_APIKEY)
         self.DEEPSEEK_APIKEY = os.getenv("DEEPSEEK_APIKEY", self.DEEPSEEK_APIKEY)
+        self.NVIDIA_APIKEY = os.getenv("NVIDIA_APIKEY", self.NVIDIA_APIKEY)
         self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", self.OLLAMA_BASE_URL)
 
         # Server
