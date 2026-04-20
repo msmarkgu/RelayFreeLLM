@@ -169,8 +169,13 @@ MODEL AVAILABILITY SUMMARY
 ✅ PASS | Mistral      | mistral-medium                           | Success
 ✅ PASS | Mistral      | codestral-2508                           | Success
 ✅ PASS | Gemini       | gemini-2.5-flash                         | Success
+✅ PASS | Nvidia       | moonshotai/kimi-k2-instruct              | Success
+✅ PASS | Nvidia       | z-ai/glm4.7                              | Success
+✅ PASS | Nvidia       | stepfun-ai/step-3.5-flash                | Success
+✅ PASS | Nvidia       | google/gemma-3-27b-it                    | Success
+✅ PASS | Nvidia       | qwen/qwen3-coder-480b-a35b-instruct      | Success
 ==================================================
-TOTAL: 16/16 models available.
+TOTAL: 21/21 models available.
 ==================================================
 ```
 
