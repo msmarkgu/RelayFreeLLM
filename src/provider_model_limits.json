@@ -251,36 +251,83 @@
       ]
     },
     {
-      "name": "Ollama",
-      "url": "http://localhost:11434",
+      "name": "Nvidia",
+      "url": "https://build.nvidia.com/explore/discover/models",
       "models": [
         {
-          "name": "llama3",
+          "name": "moonshotai/kimi-k2-instruct",
           "type": "text",
-          "scale": "medium",
+          "scale": "large",
           "limits": {
-            "requests_per_second": 10,
-            "requests_per_minute": 600,
-            "requests_per_hour": 36000,
-            "requests_per_day": 864000,
-            "tokens_per_minute": 1000000,
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 1500,
+            "requests_per_day": 30000,
+            "tokens_per_minute": -1,
             "tokens_per_hour": -1,
             "tokens_per_day": -1
-          }
+          },
+          "Max_Context_Length": 131072
         },
         {
-          "name": "mistral",
+          "name": "z-ai/glm4.7",
+          "type": "coding",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 1500,
+            "requests_per_day": 30000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 131072
+        },
+        {
+          "name": "stepfun-ai/step-3.5-flash",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 1500,
+            "requests_per_day": 30000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 131072
+        },
+        {
+          "name": "google/gemma-3-27b-it",
           "type": "text",
           "scale": "medium",
           "limits": {
-            "requests_per_second": 10,
-            "requests_per_minute": 600,
-            "requests_per_hour": 36000,
-            "requests_per_day": 864000,
-            "tokens_per_minute": 1000000,
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 1500,
+            "requests_per_day": 30000,
+            "tokens_per_minute": -1,
             "tokens_per_hour": -1,
             "tokens_per_day": -1
-          }
+          },
+          "Max_Context_Length": 131072
+        },
+        {
+          "name": "qwen/qwen3-coder-480b-a35b-instruct",
+          "type": "coding",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 30,
+            "requests_per_hour": 1500,
+            "requests_per_day": 30000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 131072
         }
       ]
     }
