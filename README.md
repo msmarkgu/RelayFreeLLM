@@ -15,6 +15,45 @@ No code changes. No retry logic. No 429 errors breaking your app.
 
 ---
 
+## The Free Tier Problem → The RelayFreeLLM Solution
+
+```
+❌ Groq hits rate limit → Your app crashes       ✅ Gemini fails → Automatically tries Groq
+❌ Gemini quota exhausted → User sees error       ✅ One provider down → Traffic routes to others
+❌ Switching providers → Rewrite your integration  ✅ Same API for everyone → OpenAI-compatible
+❌ Testing 5 providers → 5 different SDKs          ✅ More providers = More throughput
+```
+
+---
+
+## What You Get
+
+| Feature | Why It Matters |
+|---------|----------------|
+| **OpenAI-compatible** | Drop-in for your existing code. LangChain, LlamaIndex, any SDK. |
+| **Automatic Failover** | Provider down? One model hit limits? We try the next one automatically. Zero downtime. |
+| **Session Affinity** | Pin conversations to a provider via `X-Session-ID` for context caching benefits. |
+| **4-Mode Context Management** | Static, Dynamic, Reservoir, Adaptive — with extractive summarization to preserve long conversations. |
+| **Consistent Output Style** | Universal style guidance + response normalizers eliminate provider-specific quirks. |
+| **Intent-Based Routing** | `model_type=coding`, `model_scale=large`, `model_name=deepseek` — tell us what you need, not which API to call. |
+| **Real-time Streaming** | Full SSE streaming from every backend provider. |
+| **Local + Cloud** | Mix your private Ollama instance with cloud free tiers seamlessly. |
+
+---
+
+## Who It's For
+
+| User | Use Case |
+|------|----------|
+| **Independent developers** | Ship AI features without a $$$/month API bill |
+| **Students & hobbyists** | GPT-level AI, no credit card or phone number required |
+| **Self-hosters** | Combine Ollama privacy with cloud capacity |
+| **Researchers** | Batch queries across providers for higher throughput |
+
+**Community:** 75 GitHub stars, 7 forks, 8 providers supported. Active development — 38+ commits in 6 weeks.
+
+---
+
 ## Quick Start
 
 ### 1. Install
@@ -94,45 +133,6 @@ response = client.chat.completions.create(
     model="groq/llama-3.3-70b-versatile",
     messages=[{"role": "user", "content": "Hello!"}]
 )
-```
-
----
-
-## What You Get
-
-| Feature | Why It Matters |
-|---------|----------------|
-| **OpenAI-compatible** | Drop-in for your existing code. LangChain, LlamaIndex, any SDK. |
-| **Automatic Failover** | Provider down? One model hit limits? We try the next one automatically. Zero downtime. |
-| **Session Affinity** | Pin conversations to a provider via `X-Session-ID` for context caching benefits. |
-| **4-Mode Context Management** | Static, Dynamic, Reservoir, Adaptive — with extractive summarization to preserve long conversations. |
-| **Consistent Output Style** | Universal style guidance + response normalizers eliminate provider-specific quirks. |
-| **Intent-Based Routing** | `model_type=coding`, `model_scale=large`, `model_name=deepseek` — tell us what you need, not which API to call. |
-| **Real-time Streaming** | Full SSE streaming from every backend provider. |
-| **Local + Cloud** | Mix your private Ollama instance with cloud free tiers seamlessly. |
-
----
-
-## Who It's For
-
-| User | Use Case |
-|------|----------|
-| **Independent developers** | Ship AI features without a $$$/month API bill |
-| **Students & hobbyists** | GPT-level AI, no credit card or phone number required |
-| **Self-hosters** | Combine Ollama privacy with cloud capacity |
-| **Researchers** | Batch queries across providers for higher throughput |
-
-**Community:** 75 GitHub stars, 7 forks, 8 providers supported. Active development — 38+ commits in 6 weeks.
-
----
-
-## The Free Tier Problem → The RelayFreeLLM Solution
-
-```
-❌ Groq hits rate limit → Your app crashes       ✅ Gemini fails → Automatically tries Groq
-❌ Gemini quota exhausted → User sees error       ✅ One provider down → Traffic routes to others
-❌ Switching providers → Rewrite your integration  ✅ Same API for everyone → OpenAI-compatible
-❌ Testing 5 providers → 5 different SDKs          ✅ More providers = More throughput
 ```
 
 ---
