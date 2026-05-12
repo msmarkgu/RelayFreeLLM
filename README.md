@@ -63,7 +63,7 @@ pip install -r requirements.txt
 ```
 
 ### 2. Add free API keys
-Create a `.env` file:
+Create a `.env` file in the project root folder:
 ```bash
 GEMINI_APIKEY=      # ai.google.dev
 GROQ_APIKEY=        # console.groq.com
