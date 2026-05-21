@@ -5,6 +5,7 @@ Usage Tracker — tracks global token consumption and request counts.
 import json
 import os
 import time
+from copy import deepcopy
 from threading import Lock
 
 from .logging_util import ProjectLogger
@@ -55,4 +56,13 @@ class UsageTracker:
     def get_stats(self) -> dict:
         """Get current usage statistics."""
         with self.lock:
-            return self.stats.copy()
+            return deepcopy(self.stats)
+
+    def reset_stats(self):
+        """Reset all usage statistics to zero."""
+        with self.lock:
+            self.stats = {
+                "providers": {},
+                "total": {"prompt_tokens": 0, "completion_tokens": 0, "requests": 0},
+            }
+            self._save()

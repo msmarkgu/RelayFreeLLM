@@ -94,7 +94,24 @@ class ModelDispatcher:
         # Case 1: Specific Routing (provider/model format)
         if "/" in request.model and request.model != "meta-model":
             try:
-                provider_name, model_name = request.model.split("/", 1)
+                raw_provider, model_name = request.model.split("/", 1)
+
+                # Resolve the actual provider that hosts this model
+                resolved_provider = None
+                for prov_name, provider in self.selector.providers.items():
+                    for model in provider.models:
+                        if model.model_name == model_name:
+                            resolved_provider = prov_name
+                            break
+                    if resolved_provider:
+                        break
+                provider_name = resolved_provider or raw_provider
+                if resolved_provider and resolved_provider != raw_provider:
+                    self.logger.info(
+                        f"Corrected provider for '{model_name}': "
+                        f"'{raw_provider}' → '{resolved_provider}'"
+                    )
+
                 self.logger.info(
                     f"Specific routing requested: {provider_name} ({model_name})"
                 )

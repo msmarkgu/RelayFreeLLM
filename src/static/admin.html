@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RelayFreeLLM Admin</title>
+<link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>RelayFreeLLM Admin</h1>
+    <div class="subtitle">Manage provider model limits &amp; view usage statistics</div>
+  </div>
+  <div id="header-status"></div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="limits">Limits</button>
+  <button class="tab-btn" data-tab="usage">Usage</button>
+</div>
+
+<div class="container">
+
+  <div class="tab-content active" id="tab-limits">
+    <div class="toolbar">
+      <div>
+        <button class="btn btn-primary" id="btn-save-limits">Save Changes</button>
+      </div>
+      <div>
+        <button class="btn" id="btn-add-provider">+ Add Provider</button>
+        <button class="btn" id="btn-refresh-limits">Refresh</button>
+      </div>
+    </div>
+    <div id="limits-content"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+
+  <div class="tab-content" id="tab-usage">
+    <div class="toolbar">
+      <div><span class="usage-subtitle">Real-time usage stats, persisted to <code>usage_stats.json</code></span></div>
+      <div>
+        <button class="btn btn-warning" id="btn-reset-usage">Reset Stats</button>
+        <button class="btn" id="btn-refresh-usage">Refresh</button>
+      </div>
+    </div>
+    <div id="usage-content"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<div class="modal-overlay hidden" id="reset-modal">
+  <div class="modal">
+    <h3>Reset Usage Stats?</h3>
+    <p>This will permanently zero out all usage statistics. This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn" id="modal-reset-cancel">Cancel</button>
+      <button class="btn btn-danger" id="modal-reset-confirm">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="add-provider-modal">
+  <div class="modal">
+    <h3>Add Provider</h3>
+    <p>Enter the name for the new provider.</p>
+    <input type="text" id="new-provider-name" class="modal-input" placeholder="e.g. DeepSeek">
+    <div class="modal-actions">
+      <button class="btn" id="modal-provider-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-provider-confirm">Add</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/admin.js"></script>
+</body>
+</html>
