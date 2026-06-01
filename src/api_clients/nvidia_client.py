@@ -64,10 +64,10 @@ class NvidiaClient(ApiInterface):
         }
 
         try:
-            async with httpx.AsyncClient(timeout=settings.HTTP_TIMEOUT) as client:
-                if stream:
-                    return self._stream_response(client, payload, headers)
+            if stream:
+                return self._stream_response(payload, headers)
 
+            async with httpx.AsyncClient(timeout=settings.HTTP_TIMEOUT) as client:
                 response = await client.post(
                     f"{self.base_url}/chat/completions",
                     headers=headers,
@@ -89,32 +89,35 @@ class NvidiaClient(ApiInterface):
         except Exception as e:
             raise ProviderError("Nvidia", str(e)) from e
 
-    async def _stream_response(self, client: httpx.AsyncClient, payload: dict, headers: dict):
-        async with client.stream(
-            "POST",
-            f"{self.base_url}/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=settings.HTTP_STREAM_TIMEOUT
-        ) as response:
-            if response.status_code == 429:
-                raise RateLimitError("Nvidia", "Rate limited during streaming")
-            if response.status_code in (401, 403):
-                raise AuthenticationError("Nvidia", "Auth failed during streaming")
-            if response.status_code != 200:
-                raise ProviderError("Nvidia", f"API Error {response.status_code}")
+    async def _stream_response(self, payload: dict, headers: dict):
+        client = httpx.AsyncClient(timeout=settings.HTTP_STREAM_TIMEOUT)
+        try:
+            async with client.stream(
+                "POST",
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=payload,
+            ) as response:
+                if response.status_code == 429:
+                    raise RateLimitError("Nvidia", "Rate limited during streaming")
+                if response.status_code in (401, 403):
+                    raise AuthenticationError("Nvidia", "Auth failed during streaming")
+                if response.status_code != 200:
+                    raise ProviderError("Nvidia", f"API Error {response.status_code}")
 
-            async for line in response.aiter_lines():
-                if not line or not line.startswith("data: "):
-                    continue
-                data_str = line[len("data: "):]
-                if data_str == "[DONE]":
-                    break
-                try:
-                    data = json.loads(data_str)
-                    delta = data["choices"][0]["delta"]
-                    content = delta.get("content", "")
-                    if content:
-                        yield content
-                except (json.JSONDecodeError, KeyError, IndexError):
-                    continue
+                async for line in response.aiter_lines():
+                    if not line or not line.startswith("data: "):
+                        continue
+                    data_str = line[len("data: "):]
+                    if data_str == "[DONE]":
+                        break
+                    try:
+                        data = json.loads(data_str)
+                        delta = data["choices"][0]["delta"]
+                        content = delta.get("content", "")
+                        if content:
+                            yield content
+                    except (json.JSONDecodeError, KeyError, IndexError):
+                        continue
+        finally:
+            await client.aclose()

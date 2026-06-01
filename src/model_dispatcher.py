@@ -132,7 +132,7 @@ class ModelDispatcher:
                 latency_ms = (time.time() - start_time) * 1000
 
                 if stream:
-                    return model_resp  # It's an AsyncGenerator
+                    return self._stream_with_meta(model_resp, provider_name, model_name)
 
                 if self.usage_tracker:
                     self.usage_tracker.record_usage(
@@ -243,7 +243,7 @@ class ModelDispatcher:
                                 "model": model_name,
                                 "last_active": time.time()
                             }
-                    return model_resp  # It's an AsyncGenerator
+                    return self._stream_with_meta(model_resp, provider_name, model_name)
 
                 if self.usage_tracker:
                     self.usage_tracker.record_usage(
@@ -309,6 +309,14 @@ class ModelDispatcher:
             error_message="Unexpected retry loop exit",
             attempt=attempt,
         )
+
+    # ── Streaming metadata wrapper ───────────────────────────────
+
+    async def _stream_with_meta(self, inner_gen, provider, model):
+        """Wrap a streaming generator to emit metadata as the first item."""
+        yield {"type": "meta", "provider": provider, "model": model}
+        async for chunk in inner_gen:
+            yield {"type": "content", "data": chunk}
 
     # ── Provider call ───────────────────────────────────────────────
 

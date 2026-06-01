@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RelayFreeLLM Chat</title>
+<link rel="stylesheet" href="/static/chat.css">
+</head>
+<body>
+<div id="app">
+  <header id="header">
+    <div class="header-left">
+      <button id="btn-sidebar" class="icon-btn" title="Toggle sidebar">&#9776;</button>
+      <h1>RelayFreeLLM Chat</h1>
+    </div>
+    <div class="header-right">
+      <div class="storage-selector">
+        <label for="storage-mode">Conversation Storage:</label>
+        <select id="storage-mode">
+          <option value="browser">Browser</option>
+          <option value="server">Server</option>
+        </select>
+      </div>
+      <button id="btn-theme" class="icon-btn" title="Toggle theme">&#127769;</button>
+    </div>
+  </header>
+
+  <div id="controls">
+    <div class="controls-left">
+      <select id="model-select"></select>
+    </div>
+    <div class="controls-right">
+      <button id="btn-new" class="btn">New Chat</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <aside id="sidebar" class="closed">
+      <div class="sidebar-header">
+        <h2>Conversations</h2>
+        <button id="btn-sidebar-new" class="btn btn-sm">+ New</button>
+      </div>
+      <div id="sidebar-list">
+        <div class="sidebar-empty">No conversations yet</div>
+      </div>
+    </aside>
+
+    <div id="sidebar-overlay" class="hidden"></div>
+
+    <div id="chat-area">
+      <div id="messages" role="log" aria-label="Chat messages">
+        <div id="empty-state">
+          <div class="empty-icon">&#128172;</div>
+          <p>Send a message to start chatting</p>
+          <p class="hint">Model: <span id="empty-model">meta-model</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="input-area">
+    <div id="input-wrap">
+      <textarea id="input" rows="1" placeholder="Type a message..." enterkeyhint="send"></textarea>
+      <button id="btn-send" class="btn btn-primary" title="Send">Send</button>
+      <button id="btn-stop" class="btn btn-danger hidden" title="Stop streaming">Stop</button>
+    </div>
+    <div id="input-footer">
+      <span>Enter to send &middot; Shift+Enter for new line</span>
+    </div>
+  </div>
+</div>
+
+<div id="migrate-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Switch Storage?</h3>
+    <p id="migrate-text">Your current conversations in the other location won't be visible.</p>
+    <div class="modal-actions">
+      <button class="btn" id="modal-migrate-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-migrate-keep">Switch without importing</button>
+      <button class="btn btn-primary hidden" id="modal-migrate-import">Import from Browser</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/chat.js"></script>
+</body>
+</html>

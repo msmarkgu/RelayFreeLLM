@@ -115,6 +115,8 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
         async def stream_generator():
             chat_id = f"chatcmpl-{uuid4().hex[:12]}"
             created = int(datetime.datetime.now().timestamp())
+            actual_provider = chat_request.model
+            actual_model = chat_request.model
 
             try:
                 generator = await dispatcher.chat(
@@ -124,11 +126,21 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
                 )
 
                 async for chunk in generator:
+                    # Handle metadata dict from dispatcher's _stream_with_meta
+                    if isinstance(chunk, dict):
+                        if chunk.get("type") == "meta":
+                            actual_provider = chunk["provider"]
+                            actual_model = chunk["model"]
+                            continue
+                        if chunk.get("type") == "content":
+                            chunk = chunk["data"]
+
                     data = {
                         "id": chat_id,
                         "object": "chat.completion.chunk",
                         "created": created,
-                        "model": chat_request.model,
+                        "model": actual_model,
+                        "provider": actual_provider,
                         "choices": [
                             {
                                 "index": 0,
@@ -148,6 +160,7 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
                     "object": "chat.completion.chunk",
                     "created": created,
                     "model": chat_request.model,
+                    "provider": actual_provider,
                     "choices": [{"index": 0, "delta": {}, "finish_reason": "error"}],
                     "error": {"message": str(e), "type": "streaming_error"},
                 }

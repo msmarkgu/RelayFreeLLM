@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from .config import settings
+from .conversation_store import ConversationStore
 from .logging_util import ProjectLogger
 from .model_dispatcher import ModelDispatcher
 from .model_selector import ModelSelector
@@ -66,7 +67,10 @@ async def lifespan(app: FastAPI):
         logger.critical("No valid providers registered (check .env and JSON limits)! Aborting server startup.")
         sys.exit(1)
 
-    # 3. Initialize usage tracker (persisted stats)
+    # 3. Initialize conversation store (persisted conversations)
+    conversation_store = ConversationStore()
+
+    # 4. Initialize usage tracker (persisted stats)
     usage_tracker = UsageTracker()
 
     # 4. Create the dispatcher (the meta model core)
@@ -80,6 +84,7 @@ async def lifespan(app: FastAPI):
     app.state.registry = registry
     app.state.selector = selector
     app.state.dispatcher = dispatcher
+    app.state.conversation_store = conversation_store
     app.state.usage_tracker = usage_tracker
 
     logger.info(
