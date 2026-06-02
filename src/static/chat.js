@@ -9,6 +9,7 @@ const state = {
   theme: localStorage.getItem('rflm-chat-theme') || 'dark',
   storageMode: localStorage.getItem('rflm-storage-mode') || 'browser',
   sidebarOpen: window.innerWidth > 700,
+  sidebarSearch: '',
 };
 
 /* ── DOM References ──────────────────────────────────────── */
@@ -18,6 +19,7 @@ function cacheElements() {
   const ids = ['messages', 'input', 'btn-send', 'btn-stop', 'btn-new', 'btn-theme',
     'model-select', 'empty-state', 'empty-model', 'sidebar',
     'sidebar-list', 'sidebar-overlay', 'btn-sidebar', 'btn-sidebar-new',
+    'sidebar-search',
     'storage-mode', 'migrate-modal', 'migrate-text',
     'modal-migrate-cancel', 'modal-migrate-keep', 'modal-migrate-import'];
   for (const id of ids) {
@@ -297,6 +299,47 @@ async function deleteConversation(id, e) {
   }
 }
 
+async function renameConversation(id, e) {
+  e.stopPropagation();
+  const conv = state.conversations.find(c => c.id === id);
+  if (!conv) return;
+  const newTitle = prompt('Rename conversation:', conv.title || '');
+  if (newTitle === null || newTitle.trim() === '') return;
+  try {
+    await getStore().update(id, { title: newTitle.trim() });
+    // Also update the current title if this is the active conversation
+    await loadConversations();
+  } catch (e) {
+    showToast('Failed to rename: ' + e.message, 'error');
+  }
+}
+
+async function copyConversation(id, e) {
+  e.stopPropagation();
+  try {
+    let conv = state.conversations.find(c => c.id === id);
+    if (!conv) return;
+    // Get full conversation with messages
+    if (id === state.currentId && state.messages.length > 0) {
+      conv = { messages: state.messages.map(m => ({ role: m.role, content: m.content })) };
+    } else {
+      conv = await getStore().get(id);
+    }
+    if (!conv || !conv.messages || conv.messages.length === 0) {
+      showToast('No messages to copy', 'error');
+      return;
+    }
+    const text = conv.messages.map(m => {
+      const prefix = m.role === 'user' ? 'You' : 'Assistant';
+      return prefix + ':\n' + m.content;
+    }).join('\n\n');
+    await navigator.clipboard.writeText(text);
+    showToast('Conversation copied');
+  } catch (e) {
+    showToast('Failed to copy: ' + e.message, 'error');
+  }
+}
+
 async function createNewConversation() {
   try {
     const result = await getStore().create({ model: state.model });
@@ -337,11 +380,98 @@ function deriveTitle(messages) {
   return title;
 }
 
+/* ── Edit / Delete Messages ────────────────────────────── */
+
+function deleteMessage(msg) {
+  const idx = state.messages.indexOf(msg);
+  if (idx === -1) return;
+  state.messages.splice(idx, 1);
+  renderMessages();
+  saveCurrentConversation();
+}
+
+function editMessage(msg) {
+  if (msg.role !== 'user') return;
+  const idx = state.messages.indexOf(msg);
+  if (idx === -1) return;
+
+  // Remove all messages after this one
+  state.messages.splice(idx + 1);
+
+  // Find the bubble DOM element for this message
+  const bubbles = els.messages.querySelectorAll('.message.user');
+  const bubbleEl = bubbles[idx]?.querySelector('.bubble');
+  if (!bubbleEl) return;
+
+  // Replace bubble content with a textarea + action buttons
+  const textarea = document.createElement('textarea');
+  textarea.className = 'edit-textarea';
+  textarea.value = msg.content;
+  textarea.rows = Math.min(5, msg.content.split('\n').length);
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn btn-primary btn-sm';
+  saveBtn.textContent = 'Save';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-sm';
+  cancelBtn.textContent = 'Cancel';
+
+  const editActions = document.createElement('div');
+  editActions.className = 'edit-actions';
+  editActions.appendChild(saveBtn);
+  editActions.appendChild(cancelBtn);
+
+  const editWrap = document.createElement('div');
+  editWrap.className = 'edit-wrap';
+  editWrap.appendChild(textarea);
+  editWrap.appendChild(editActions);
+
+  bubbleEl.innerHTML = '';
+  bubbleEl.appendChild(editWrap);
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+  const cleanup = () => {
+    bubbleEl.innerHTML = renderMarkdown(msg.content);
+  };
+
+  const submitEdit = () => {
+    const newText = textarea.value.trim();
+    if (!newText) return;
+    msg.content = newText;
+    // Re-render up to this message
+    renderMessages();
+    els.input.focus();
+    performStreamingSend();
+  };
+
+  saveBtn.onclick = submitEdit;
+  cancelBtn.onclick = cleanup;
+
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submitEdit();
+    }
+    if (e.key === 'Escape') {
+      cleanup();
+    }
+  });
+}
+
 /* ── Sidebar ──────────────────────────────────────────────── */
 function renderSidebar() {
   const list = els['sidebar-list'];
-  if (state.conversations.length === 0) {
-    list.innerHTML = '<div class="sidebar-empty">No conversations yet</div>';
+
+  // Filter conversations by search query
+  const query = state.sidebarSearch.toLowerCase().trim();
+  const filtered = query
+    ? state.conversations.filter(c => (c.title || '').toLowerCase().includes(query))
+    : state.conversations;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="sidebar-empty">' + (query ? 'No matching conversations' : 'No conversations yet') + '</div>';
     return;
   }
 
@@ -354,7 +484,7 @@ function renderSidebar() {
 
   const groups = { Today: [], Yesterday: [], Older: [] };
 
-  for (const c of state.conversations) {
+  for (const c of filtered) {
     const d = new Date(c.updated_at || c.created_at);
     const dStr = d.toDateString();
     if (dStr === today) groups.Today.push(c);
@@ -374,7 +504,11 @@ function renderSidebar() {
       html += '<div class="conv-title">' + esc(c.title || 'New conversation') + '</div>';
       html += '<div class="conv-meta">' + c.msg_count + ' msg &middot; ' + (c.model || 'meta-model') + '</div>';
       html += '</div>';
-      html += '<button class="conv-delete" onclick="deleteConversation(\'' + c.id + '\', event)" title="Delete">&#10005;</button>';
+      html += '<div class="conv-actions">';
+      html += '<button class="conv-action conv-rename" onclick="renameConversation(\'' + c.id + '\', event)" title="Rename">&#9998;</button>';
+      html += '<button class="conv-action conv-copy" onclick="copyConversation(\'' + c.id + '\', event)" title="Copy conversation">&#128203;</button>';
+      html += '<button class="conv-action conv-del" onclick="deleteConversation(\'' + c.id + '\', event)" title="Delete">&#10005;</button>';
+      html += '</div>';
       html += '</div>';
     }
   }
@@ -543,15 +677,69 @@ function appendMessageBubble(msg) {
 
   const label = document.createElement('div');
   label.className = 'label';
-  label.textContent = msg.role === 'user' ? 'You' : 'Assistant';
+  if (msg.role === 'user') {
+    label.textContent = 'You';
+  } else {
+    label.textContent = 'Assistant' + (msg.provider ? ' \u00B7 ' + msg.provider + ' / ' + msg.actualModel : '');
+  }
   div.appendChild(label);
+
+  const contentWrap = document.createElement('div');
+  contentWrap.className = 'msg-content-wrap';
 
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
   if (msg.content) {
     bubble.innerHTML = renderMarkdown(msg.content);
   }
-  div.appendChild(bubble);
+  contentWrap.appendChild(bubble);
+
+  const actionsDiv = document.createElement('div');
+  actionsDiv.className = 'msg-actions';
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'msg-action';
+  copyBtn.textContent = '\u{1F4CB}';
+  copyBtn.title = 'Copy message';
+  copyBtn.onclick = (e) => {
+    e.stopPropagation();
+    const text = msg.content;
+    navigator.clipboard.writeText(text).then(() => {
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = '\u{1F4CB}'; }, 2000);
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = '\u{1F4CB}'; }, 2000);
+    });
+  };
+  actionsDiv.appendChild(copyBtn);
+
+  if (!msg.streaming) {
+    if (msg.role === 'user') {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'msg-action';
+      editBtn.textContent = '\u270F';
+      editBtn.title = 'Edit message';
+      editBtn.onclick = (e) => { e.stopPropagation(); editMessage(msg); };
+      actionsDiv.appendChild(editBtn);
+    }
+    const delBtn = document.createElement('button');
+    delBtn.className = 'msg-action msg-action-del';
+    delBtn.textContent = '\u2716';
+    delBtn.title = 'Delete message and all after';
+    delBtn.onclick = (e) => { e.stopPropagation(); deleteMessage(msg); };
+    actionsDiv.appendChild(delBtn);
+  }
+
+  contentWrap.appendChild(actionsDiv);
+
+  div.appendChild(contentWrap);
   els.messages.appendChild(div);
   scrollToBottom();
 }
@@ -583,6 +771,10 @@ async function sendMessage() {
   autoResizeInput();
   renderMessages();
 
+  await performStreamingSend();
+}
+
+async function performStreamingSend() {
   // Add placeholder assistant message
   const assistantMsg = { role: 'assistant', content: '', streaming: true };
   state.messages.push(assistantMsg);
@@ -764,6 +956,11 @@ function init() {
   els['btn-sidebar'].addEventListener('click', toggleSidebar);
   els['sidebar-overlay'].addEventListener('click', toggleSidebar);
   els['btn-sidebar-new'].addEventListener('click', createNewConversation);
+
+  els['sidebar-search'].addEventListener('input', () => {
+    state.sidebarSearch = els['sidebar-search'].value;
+    renderSidebar();
+  });
 
   els['model-select'].addEventListener('change', () => {
     state.model = els['model-select'].value;

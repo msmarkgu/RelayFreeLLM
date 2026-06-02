@@ -37,6 +37,7 @@ No code changes. No retry logic. No 429 errors breaking your app.
 | **Consistent Output Style** | Universal style guidance + response normalizers eliminate provider-specific quirks. |
 | **Intent-Based Routing** | `model_type=coding`, `model_scale=large`, `model_name=deepseek` — tell us what you need, not which API to call. |
 | **Real-time Streaming** | Full SSE streaming from every backend provider. |
+| **Chat UI** | Built-in web chat interface at [`/chat`](http://localhost:8000/chat) — streaming, conversation history, dark/light mode, Browser or Server storage. |
 | **Local + Cloud** | Mix your private Ollama instance with cloud free tiers seamlessly. |
 | **Admin Dashboard** | Visual editor for provider limits and real-time usage monitoring at [`/admin`](http://localhost:8000/admin) — no manual JSON editing or server restarts. |
 
@@ -120,7 +121,10 @@ python -m src.server
 ### 5. Open the Admin Dashboard
 Once the server is running, open [`http://localhost:8000/admin`](http://localhost:8000/admin) in your browser to manage rate limits, add/remove models, and monitor usage in real time.
 
-### 6. Use it
+### 6. Open the Chat Interface
+Open [`http://localhost:8000/chat`](http://localhost:8000/chat) to start chatting — streaming responses, persistent conversation history, dark/light mode, and direct access to all providers.
+
+### 7. Use it
 ```python
 from openai import OpenAI
 
@@ -160,6 +164,26 @@ Manage everything from your browser. The admin dashboard at [`http://localhost:8
 - Data auto-refreshes every 30 seconds.
 
 All data is stored in JSON files — no database required.
+
+---
+
+## Chat Interface
+
+A full-featured web chat UI ships with the server at [`/chat`](http://localhost:8000/chat).
+
+### Features
+
+- **Streaming responses** — real-time token-by-token output
+- **Provider attribution** — see which provider/model handled each response
+- **Conversation history** — persist chats in your browser (`localStorage`) or on the server (opt-in)
+- **Conversation management** — sidebar with search, rename, copy, delete
+- **Edit & delete messages** — fix typos or prune unwanted branches mid-conversation
+- **Intent-based routing** — switch models via the dropdown (`meta-model` or specific `Provider/Model`)
+- **Dark/light mode** — toggle in the header, preference saved
+
+### Storage
+
+By default, conversations are saved to your browser's `localStorage`. Switch to **Server** storage via the header dropdown to persist conversations to `conversations.json` on disk — survives browser resets and is accessible across devices sharing the same device ID.
 
 ---
 
