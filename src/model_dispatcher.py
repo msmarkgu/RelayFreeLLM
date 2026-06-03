@@ -374,10 +374,11 @@ class ModelDispatcher:
                 target_context_tokens=target_context_tokens
             )
 
-            # Convert to message format for API
+            # Convert to message format for API, filtering out empty messages
             context_messages = [
                 {"role": msg.role, "content": msg.content}
                 for msg in selected_history
+                if msg.content and msg.content.strip()
             ]
 
             self.logger.debug(

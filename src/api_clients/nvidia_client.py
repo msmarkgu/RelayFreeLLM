@@ -103,7 +103,8 @@ class NvidiaClient(ApiInterface):
                 if response.status_code in (401, 403):
                     raise AuthenticationError("Nvidia", "Auth failed during streaming")
                 if response.status_code != 200:
-                    raise ProviderError("Nvidia", f"API Error {response.status_code}")
+                    body = await response.aread()
+                    raise ProviderError("Nvidia", f"API Error {response.status_code}: {body.decode(errors='replace')}")
 
                 async for line in response.aiter_lines():
                     if not line or not line.startswith("data: "):

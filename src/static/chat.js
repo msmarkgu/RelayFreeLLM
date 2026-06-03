@@ -390,6 +390,18 @@ function deleteMessage(msg) {
   saveCurrentConversation();
 }
 
+function regenerateResponse() {
+  if (state.streaming) return;
+  for (let i = state.messages.length - 1; i >= 0; i--) {
+    if (state.messages[i].role === 'assistant') {
+      state.messages.splice(i, 1);
+      break;
+    }
+  }
+  renderMessages();
+  performStreamingSend();
+}
+
 function editMessage(msg) {
   if (msg.role !== 'user') return;
   const idx = state.messages.indexOf(msg);
@@ -732,9 +744,17 @@ function appendMessageBubble(msg) {
     const delBtn = document.createElement('button');
     delBtn.className = 'msg-action msg-action-del';
     delBtn.textContent = '\u2716';
-    delBtn.title = 'Delete message and all after';
+    delBtn.title = 'Delete message';
     delBtn.onclick = (e) => { e.stopPropagation(); deleteMessage(msg); };
     actionsDiv.appendChild(delBtn);
+    if (msg.role === 'assistant' && state.messages.indexOf(msg) === state.messages.length - 1) {
+      const regenBtn = document.createElement('button');
+      regenBtn.className = 'msg-action msg-action-regen';
+      regenBtn.textContent = '\u21BB';
+      regenBtn.title = 'Regenerate response';
+      regenBtn.onclick = (e) => { e.stopPropagation(); regenerateResponse(); };
+      actionsDiv.appendChild(regenBtn);
+    }
   }
 
   contentWrap.appendChild(actionsDiv);
@@ -790,7 +810,7 @@ async function performStreamingSend() {
   try {
     const body = {
       model: state.model,
-      messages: state.messages.filter(m => m.role !== 'system').map(m => ({
+      messages: state.messages.filter(m => m.role !== 'system' && !(m.streaming && !m.content)).map(m => ({
         role: m.role === 'error' ? 'assistant' : m.role,
         content: m.content,
       })),
@@ -895,7 +915,28 @@ async function performStreamingSend() {
     els.input.focus();
     const bubbles = els.messages.querySelectorAll('.message.assistant');
     const lastBubble = bubbles[bubbles.length - 1];
-    if (lastBubble) lastBubble.classList.remove('streaming');
+    if (lastBubble) {
+      lastBubble.classList.remove('streaming');
+      const actionsDiv = lastBubble.querySelector('.msg-actions');
+      if (actionsDiv) {
+        if (!actionsDiv.querySelector('.msg-action-del')) {
+          const delBtn = document.createElement('button');
+          delBtn.className = 'msg-action msg-action-del';
+          delBtn.textContent = '\u2716';
+          delBtn.title = 'Delete message';
+          delBtn.onclick = (e) => { e.stopPropagation(); deleteMessage(lastMsg); };
+          actionsDiv.appendChild(delBtn);
+        }
+        if (!actionsDiv.querySelector('.msg-action-regen')) {
+          const regenBtn = document.createElement('button');
+          regenBtn.className = 'msg-action msg-action-regen';
+          regenBtn.textContent = '\u21BB';
+          regenBtn.title = 'Regenerate response';
+          regenBtn.onclick = (e) => { e.stopPropagation(); regenerateResponse(); };
+          actionsDiv.appendChild(regenBtn);
+        }
+      }
+    }
 
     // Save after every response
     await saveCurrentConversation();
