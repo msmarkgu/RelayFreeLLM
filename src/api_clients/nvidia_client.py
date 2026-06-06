@@ -76,7 +76,10 @@ class NvidiaClient(ApiInterface):
 
                 if response.status_code == 200:
                     data = response.json()
-                    return data["choices"][0]["message"]["content"]
+                    content = data["choices"][0]["message"].get("content")
+                    if content is None:
+                        content = data["choices"][0]["message"].get("reasoning", "")
+                    return content
                 elif response.status_code == 429:
                     raise RateLimitError("Nvidia", f"Rate limited: {response.text}")
                 elif response.status_code in (401, 403):
@@ -116,6 +119,8 @@ class NvidiaClient(ApiInterface):
                         data = json.loads(data_str)
                         delta = data["choices"][0]["delta"]
                         content = delta.get("content", "")
+                        if not content:
+                            content = delta.get("reasoning", "")
                         if content:
                             yield content
                     except (json.JSONDecodeError, KeyError, IndexError):

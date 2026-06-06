@@ -52,7 +52,10 @@ class ContextManager:
         """
         if not full_history:
             return []
-            
+
+        if target_context_tokens <= 0:
+            return []
+
         if self.context_management_mode == "disabled":
             return []
         elif self.context_management_mode == "static":
@@ -191,6 +194,8 @@ class ContextManager:
 
     def _estimate_tokens(self, text: str) -> int:
         """Rough token estimate: 1 word ≈ 1.3 tokens."""
+        if not text:
+            return 0
         return int(len(text.split()) * 1.3)
 
     def _extractive_summarize(

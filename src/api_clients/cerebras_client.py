@@ -67,7 +67,8 @@ class CerebrasClient(ApiInterface):
                 and chat_completion.choices
                 and len(chat_completion.choices) > 0
             ):
-                return chat_completion.choices[0].message.content
+                content = chat_completion.choices[0].message.content
+                return content if content is not None else ""
             else:
                 raise ProviderError("Cerebras", "No response from the model.")
 

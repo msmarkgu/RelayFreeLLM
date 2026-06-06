@@ -130,6 +130,8 @@ def build_response(
     completion_tokens: int = 0,
 ) -> ChatCompletionResponse:
     """Build a ChatCompletionResponse from raw values."""
+    if content is None:
+        content = ""
     return ChatCompletionResponse(
         model=model,
         choices=[

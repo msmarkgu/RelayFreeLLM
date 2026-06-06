@@ -87,7 +87,8 @@ class ModelSelector:
         self.logger.info(f"Removed '{name}' from ModelSelector limits mapping.")
 
     def estimate_tokens(self, text):
-        # Simplified token estimate: 1 word ≈ 1.3 tokens
+        if not text:
+            return 0
         return int(len(text.split()) * 1.3)
 
     def select(

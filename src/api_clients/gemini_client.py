@@ -83,7 +83,8 @@ class GeminiClient(ApiInterface):
             response = await self.client.aio.models.generate_content(
                 model=model, contents=gemini_contents, config=config
             )
-            return response.text
+            text = response.text
+            return text if text is not None else ""
 
         except Exception as e:
             error_str = str(e).lower()
