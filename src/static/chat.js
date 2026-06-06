@@ -358,7 +358,12 @@ async function saveCurrentConversation() {
   if (!state.currentId) return;
   if (state.messages.length === 0) return;
   try {
-    const msgs = state.messages.map(m => ({ role: m.role, content: m.content }));
+    const msgs = state.messages.map(m => ({
+      role: m.role,
+      content: m.content,
+      ...(m.provider && { provider: m.provider }),
+      ...(m.actualModel && { actualModel: m.actualModel }),
+    }));
     const title = deriveTitle(state.messages);
     await getStore().update(state.currentId, {
       messages: msgs,

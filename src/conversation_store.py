@@ -81,7 +81,7 @@ class ConversationStore:
                     if "model" in data:
                         c["model"] = data["model"]
                     if "messages" in data:
-                        c["messages"] = data["messages"]
+                        c["messages"] = [m if isinstance(m, dict) else {"role": "user", "content": str(m)} for m in data["messages"]]
                     c["updated_at"] = self._now()
                     self._save()
                     return True
