@@ -72,6 +72,7 @@ class ModelSelector:
                         model_type=m.get("type", metadata["type"]),
                         model_scale=m.get("scale", metadata["scale"]),
                         max_context_length=m.get("Max_Context_Length", 4096),
+                        modality=m.get("modality", "text"),
                     )
                 )
             providers[provider_name] = ApiProvider(provider_name, models)
@@ -376,6 +377,7 @@ class ModelSelector:
                         "scale": model.model_scale,
                         "limits": model.limits,
                         "Max_Context_Length": model.max_context_length,
+                        "modality": model.modality,
                     }
                 )
             data["providers"].append(prov_data)

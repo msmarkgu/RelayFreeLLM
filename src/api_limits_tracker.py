@@ -16,6 +16,7 @@ class ApiLimitsTracker:
         model_type: str = "text",
         model_scale: str = "medium",
         max_context_length: int = 4096,
+        modality: str = "text",
     ) -> None:
         self.prvdr_name = provider_name
         self.model_name = model_name
@@ -23,6 +24,7 @@ class ApiLimitsTracker:
         self.model_type = model_type
         self.model_scale = model_scale
         self.max_context_length = max_context_length
+        self.modality = modality
         self.cooldown_until = 0
 
         # Usage tracking

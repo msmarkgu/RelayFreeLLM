@@ -474,8 +474,13 @@ class ModelDispatcher:
             # Add current user message
             messages.append({"role": "user", "content": user_prompt})
 
-        # Strip multimodal content parts for providers that don't support them
-        if not api_client.supports_multimodal:
+        # Strip multimodal content parts for models that don't support vision.
+        # Priority: 1) per-model modality from registry, 2) client-level fallback.
+        model_modality = self._get_model_modality(provider_name, model_name)
+        can_handle_images = model_modality == "vision" or (
+            model_modality != "vision" and getattr(api_client, "supports_multimodal", False)
+        )
+        if not can_handle_images:
             normalized = []
             for msg in messages:
                 content = msg["content"]
@@ -526,6 +531,20 @@ class ModelDispatcher:
             self.logger.debug(f"Model response:\n{normalized_resp}")
             return normalized_resp
         return model_resp
+
+    def _get_model_modality(self, provider_name: str, model_name: str) -> str:
+        """Look up the modality for a specific provider/model from the registry."""
+        providers = getattr(self.selector, "providers", None)
+        if not isinstance(providers, dict):
+            return "text"
+        provider = providers.get(provider_name)
+        if not provider:
+            return "text"
+        models = getattr(provider, "models", [])
+        for model in models:
+            if getattr(model, "model_name", None) == model_name:
+                return getattr(model, "modality", "text")
+        return "text"
 
     def _calculate_target_context_tokens(
         self,
