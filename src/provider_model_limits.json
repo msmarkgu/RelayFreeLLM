@@ -41,12 +41,12 @@
           "Max_Context_Length": 131000
         },
         {
-          "name": "qwen/qwen3-32b",
+          "name": "qwen/qwen3.6-27b",
           "type": "text",
           "scale": "medium",
           "limits": {
             "requests_per_second": 1,
-            "requests_per_minute": 60,
+            "requests_per_minute": 30,
             "requests_per_hour": 300,
             "requests_per_day": 1000,
             "tokens_per_minute": 6000,
@@ -116,7 +116,7 @@
           "Max_Context_Length": 8000
         },
         {
-          "name": "meta-llama/llama-4-scout-17b-16e-instruct",
+          "name": "llama-3.1-8b-instant",
           "type": "text",
           "scale": "large",
           "limits": {
@@ -337,7 +337,7 @@
           "Max_Context_Length": 16000
         },
         {
-          "name": "z-ai/glm-5.2",
+          "name": "deepseek-ai/deepseek-v4-flash",
           "type": "text",
           "scale": "medium",
           "limits": {

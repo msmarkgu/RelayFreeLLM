@@ -88,12 +88,12 @@ MODEL AVAILABILITY SUMMARY
 ======================================================================
 ✅ PASS | Cerebras        | zai-glm-4.7                                   | Success
 ✅ PASS | Groq            | llama-3.3-70b-versatile                       | Success
-✅ PASS | Groq            | qwen/qwen3-32b                                | Success
+✅ PASS | Groq            | qwen/qwen3.6-27b                              | Success
 ✅ PASS | Groq            | openai/gpt-oss-20b                            | Success
 ✅ PASS | Groq            | openai/gpt-oss-120b                           | Success
 ✅ PASS | Groq            | openai/gpt-oss-safeguard-20b                  | Success
 ✅ PASS | Groq            | groq/compound                                 | Success
-✅ PASS | Groq            | meta-llama/llama-4-scout-17b-16e-instruct     | Success
+✅ PASS | Groq            | llama-3.1-8b-instant                          | Success
 ✅ PASS | Mistral         | mistral-large-latest                          | Success
 ✅ PASS | Mistral         | mistral-medium-latest                         | Success
 ✅ PASS | Mistral         | codestral-latest                              | Success
@@ -106,7 +106,7 @@ MODEL AVAILABILITY SUMMARY
 ✅ PASS | Nvidia          | minimaxai/minimax-m3                          | Success
 ✅ PASS | Nvidia          | openai/gpt-oss-120b                           | Success
 ✅ PASS | Nvidia          | stepfun-ai/step-3.7-flash                     | Success
-✅ PASS | Nvidia          | z-ai/glm-5.2                                  | Success
+✅ PASS | Nvidia          | deepseek-ai/deepseek-v4-flash                 | Success
 ✅ PASS | Nvidia          | mistralai/mistral-nemotron                    | Success
 ======================================================================
 TOTAL: 22/22 models available.
