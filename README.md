@@ -80,20 +80,21 @@ python -m tests.test_models_availability
 ```
 
 <details>
-<summary>Click to see expected output (22/22 models available)</summary>
+<summary>Click to see expected output (20/20 models available)</summary>
 
 ```
 ======================================================================
 MODEL AVAILABILITY SUMMARY
 ======================================================================
 ✅ PASS | Cerebras        | zai-glm-4.7                                   | Success
+✅ PASS | Cerebras        | gpt-oss-120b                                  | Success
+✅ PASS | Cerebras        | gemma-4-31b                                   | Success
 ✅ PASS | Groq            | llama-3.3-70b-versatile                       | Success
 ✅ PASS | Groq            | qwen/qwen3.6-27b                              | Success
-✅ PASS | Groq            | openai/gpt-oss-20b                            | Success
 ✅ PASS | Groq            | openai/gpt-oss-120b                           | Success
+✅ PASS | Groq            | openai/gpt-oss-20b                            | Success
 ✅ PASS | Groq            | openai/gpt-oss-safeguard-20b                  | Success
 ✅ PASS | Groq            | groq/compound                                 | Success
-✅ PASS | Groq            | llama-3.1-8b-instant                          | Success
 ✅ PASS | Mistral         | mistral-large-latest                          | Success
 ✅ PASS | Mistral         | mistral-medium-latest                         | Success
 ✅ PASS | Mistral         | codestral-latest                              | Success
@@ -104,12 +105,9 @@ MODEL AVAILABILITY SUMMARY
 ✅ PASS | Mistral         | codestral-2508                                | Success
 ✅ PASS | Gemini          | gemini-2.5-flash                              | Success
 ✅ PASS | Nvidia          | minimaxai/minimax-m3                          | Success
-✅ PASS | Nvidia          | openai/gpt-oss-120b                           | Success
 ✅ PASS | Nvidia          | stepfun-ai/step-3.7-flash                     | Success
-✅ PASS | Nvidia          | deepseek-ai/deepseek-v4-flash                 | Success
-✅ PASS | Nvidia          | mistralai/mistral-nemotron                    | Success
 ======================================================================
-TOTAL: 22/22 models available.
+TOTAL: 20/20 models available.
 ======================================================================
 ```
 

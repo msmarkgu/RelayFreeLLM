@@ -18,6 +18,36 @@
             "tokens_per_day": 1000000
           },
           "Max_Context_Length": 64000
+        },
+        {
+          "name": "gpt-oss-120b",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 900,
+            "requests_per_day": 14400,
+            "tokens_per_minute": 30000,
+            "tokens_per_hour": 1000000,
+            "tokens_per_day": 1000000
+          },
+          "Max_Context_Length": 64000
+        },
+        {
+          "name": "gemma-4-31b",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 900,
+            "requests_per_day": 14400,
+            "tokens_per_minute": 30000,
+            "tokens_per_hour": 1000000,
+            "tokens_per_day": 1000000
+          },
+          "Max_Context_Length": 64000
         }
       ]
     },
@@ -56,7 +86,7 @@
           "Max_Context_Length": 32000
         },
         {
-          "name": "openai/gpt-oss-20b",
+          "name": "openai/gpt-oss-120b",
           "type": "text",
           "scale": "medium",
           "limits": {
@@ -71,9 +101,9 @@
           "Max_Context_Length": 8000
         },
         {
-          "name": "openai/gpt-oss-120b",
+          "name": "openai/gpt-oss-20b",
           "type": "text",
-          "scale": "large",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
@@ -114,22 +144,6 @@
             "tokens_per_day": -1
           },
           "Max_Context_Length": 8000
-        },
-        {
-          "name": "llama-3.1-8b-instant",
-          "type": "text",
-          "scale": "large",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 30,
-            "requests_per_hour": 1800,
-            "requests_per_day": 1000,
-            "tokens_per_minute": 12000,
-            "tokens_per_hour": 30000,
-            "tokens_per_day": 100000
-          },
-          "Max_Context_Length": 128000,
-          "modality": "vision"
         }
       ]
     },
@@ -307,21 +321,6 @@
           "Max_Context_Length": 8000
         },
         {
-          "name": "openai/gpt-oss-120b",
-          "type": "coding",
-          "scale": "large",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 30,
-            "requests_per_hour": 1500,
-            "requests_per_day": 30000,
-            "tokens_per_minute": -1,
-            "tokens_per_hour": -1,
-            "tokens_per_day": -1
-          },
-          "Max_Context_Length": 4000
-        },
-        {
           "name": "stepfun-ai/step-3.7-flash",
           "type": "text",
           "scale": "large",
@@ -335,37 +334,6 @@
             "tokens_per_day": -1
           },
           "Max_Context_Length": 16000
-        },
-        {
-          "name": "deepseek-ai/deepseek-v4-flash",
-          "type": "text",
-          "scale": "medium",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 30,
-            "requests_per_hour": 1500,
-            "requests_per_day": 30000,
-            "tokens_per_minute": -1,
-            "tokens_per_hour": -1,
-            "tokens_per_day": -1
-          },
-          "Max_Context_Length": 16000,
-          "modality": "vision"
-        },
-        {
-          "name": "mistralai/mistral-nemotron",
-          "type": "coding",
-          "scale": "large",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 30,
-            "requests_per_hour": 1500,
-            "requests_per_day": 30000,
-            "tokens_per_minute": -1,
-            "tokens_per_hour": -1,
-            "tokens_per_day": -1
-          },
-          "Max_Context_Length": 4000
         }
       ]
     }
