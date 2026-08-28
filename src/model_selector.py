@@ -184,6 +184,50 @@ class ModelSelector:
 
         raise RuntimeError("All models in all providers are at capacity. Try later.")
 
+    def select_many(
+        self,
+        num: int,
+        user_input: str,
+        system_prompt: str = "",
+        exclude_providers: list[str] | None = None,
+        model_type: str | None = None,
+        model_scale: str | None = None,
+        modality: str | None = None,
+    ) -> list[tuple[str, str]]:
+        """
+        Return up to *num* (provider, model_name) tuples with available
+        free-quota, preferring distinct providers per selection so that
+        parallel calls don't serialize on GLOBAL_PROVIDER_LOCK.
+
+        Each call to self.select() already records usage via
+        ApiProvider.select_within(), so the selected models' quota is
+        reserved for subsequent callers.
+
+        Returns fewer than *num* items when not enough models have
+        available capacity.
+        """
+        selected: list[tuple[str, str]] = []
+        local_exclude = list(exclude_providers) if exclude_providers else []
+        tokens = self.estimate_tokens(user_input) + self.estimate_tokens(system_prompt)
+        for _ in range(num):
+            try:
+                provider_name, model_name, _wait = self.select(
+                    user_input,
+                    system_prompt,
+                    exclude_providers=local_exclude,
+                    model_type=model_type,
+                    model_scale=model_scale,
+                    modality=modality,
+                )
+                if model_name:
+                    selected.append((provider_name, model_name))
+                    local_exclude.append(provider_name)
+                else:
+                    break
+            except RuntimeError:
+                break
+        return selected
+
     def get_model_providers(self) -> dict[str, ApiProvider]:
         return self.providers
 

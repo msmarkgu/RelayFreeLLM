@@ -142,6 +142,72 @@ class ChatCompletionResponse(BaseModel):
     meta: MetaInfo  # extension: provider attribution
 
 
+# ── Agent / Map-Reduce Request/Response ────────────────────────────────
+
+
+class AgentSubtaskSpec(BaseModel):
+    """A single subtask produced by the planner."""
+
+    id: int
+    description: str
+    model_type: str | None = None   # text, coding, etc. — hints for selection
+    model_scale: str | None = None  # large, medium, small
+    prompt: str                     # the actual task text sent to the expert
+
+
+class AgentSubtaskResult(BaseModel):
+    """Result of a single expert subtask."""
+
+    id: int
+    description: str
+    provider: str
+    model: str
+    result: str
+
+
+class AgentMetaInfo(BaseModel):
+    """Attribution and timing for an agent orchestration run."""
+
+    planner_provider: str | None = None
+    planner_model: str | None = None
+    synthesizer_provider: str | None = None
+    synthesizer_model: str | None = None
+    latency_ms: float = 0.0
+    subtasks_completed: int = 0
+    subtasks_failed: int = 0
+
+
+class AgentRunRequest(BaseModel):
+    """
+    Request payload for the /v1/agents/run endpoint.
+
+    The orchestrator decomposes *task* into subtasks using a planner LLM,
+    runs each subtask on a different model in parallel, and synthesizes the
+    results into *final_answer*.
+    """
+
+    task: str
+    use_case: Literal["research", "code", "qa", "general"] = "general"
+    num_experts: int = Field(default=4, ge=1, le=8)
+    stream: bool = False
+    max_tokens_per_subtask: int = 1500
+    max_tokens_synthesis: int = 3000
+
+
+class AgentRunResponse(BaseModel):
+    """
+    Response payload for the /v1/agents/run endpoint.
+
+    Includes the final synthesised answer and per-subtask attribution so
+    clients can inspect which provider/model handled each subtask.
+    """
+
+    task: str
+    subtasks: list[AgentSubtaskResult]
+    final_answer: str
+    meta: AgentMetaInfo
+
+
 # ── Helper Factories ────────────────────────────────────────────────
 
 

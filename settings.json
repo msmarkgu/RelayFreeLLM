@@ -57,5 +57,18 @@
   "http": {
     "timeout_seconds": 60,
     "__timeout_seconds_comment": "HTTP request timeout in seconds"
+  },
+
+  "agents": {
+    "__max_parallel_experts_comment": "Default number of expert subtasks to run in parallel (capped by max_experts_absolute)",
+    "max_parallel_experts": 4,
+    "max_experts_absolute": 8,
+    "continue_on_subtask_error": true,
+    "planner_model_type": "large",
+    "planner_model_scale": null,
+    "synthesizer_model_type": "large",
+    "synthesizer_model_scale": null,
+    "max_tokens_per_subtask": 1500,
+    "max_tokens_synthesis": 3000
   }
 }

@@ -23,6 +23,7 @@ from .provider_registry import ProviderRegistry
 from .usage_tracker import UsageTracker
 from .router import api_router
 from .admin import admin_router
+from .agents_router import agents_router
 
 # Configure logging early
 ProjectLogger.configure(
@@ -115,6 +116,7 @@ app.add_middleware(
 # Register routes
 app.include_router(api_router)
 app.include_router(admin_router)
+app.include_router(agents_router)
 
 
 if __name__ == "__main__":

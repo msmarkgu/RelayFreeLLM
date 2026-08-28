@@ -113,6 +113,51 @@ class Settings:
         self.HTTP_READ_TIMEOUT = 60.0
         self.HTTP_STREAM_TIMEOUT = 120.0
 
+        # Agent / Map-Reduce Orchestration
+        self.AGENTS_MAX_PARALLEL = 4
+        self.AGENTS_MAX_PARALLEL_ABSOLUTE = 8
+        self.AGENTS_CONTINUE_ON_SUBTASK_ERROR = True
+        self.AGENTS_PLANNER_MODEL_TYPE = "large"
+        self.AGENTS_PLANNER_MODEL_SCALE = None
+        self.AGENTS_SYNTHESIZER_MODEL_TYPE = "large"
+        self.AGENTS_SYNTHESIZER_MODEL_SCALE = None
+        self.AGENTS_MAX_TOKENS_PER_SUBTASK = 1500
+        self.AGENTS_MAX_TOKENS_SYNTHESIS = 3000
+        self.AGENTS_PLANNER_PROMPT = (
+            "You are a task decomposition planner.\n"
+            "Given a user task, split it into independent subtasks that can each be "
+            "answered by a different AI model.\n"
+            "Return a JSON array where each element has exactly these keys:\n"
+            "  \"id\"        : integer (1, 2, 3, ...)\n"
+            "  \"description\": short label for the subtask\n"
+            "  \"model_type\" : one of \"text\", \"coding\" (or null for any)\n"
+            "  \"model_scale\": one of \"large\", \"medium\", \"small\" (or null for any)\n"
+            "  \"prompt\"     : the full prompt to send to the expert model\n"
+            "Return ONLY the JSON array, no explanation."
+        )
+        self.AGENTS_EXPERT_PROMPTS = {
+            "research": (
+                "You are a research analyst. Answer the following subtask thoroughly "
+                "and accurately, citing key facts."
+            ),
+            "code": (
+                "You are a senior software engineer. Complete the following subtask "
+                "with correct, well-structured code."
+            ),
+            "qa": (
+                "You are a domain expert. Answer the following question directly "
+                "and concisely."
+            ),
+            "general": (
+                "You are a helpful assistant. Complete the following subtask."
+            ),
+        }
+        self.AGENTS_SYNTHESIZER_PROMPT = (
+            "You are a synthesizer. Combine the following expert analyses into a "
+            "single coherent answer to the original task. Preserve important details "
+            "and avoid repeating information."
+        )
+
     def _load_from_json(self):
         """Overlay settings from settings.json."""
         if not os.path.exists(self.SETTINGS_FILE):
@@ -138,6 +183,15 @@ class Settings:
                 "routing.global_provider_lock": "GLOBAL_PROVIDER_LOCK",
                 "routing.use_server_side_system_prompt": "USE_SERVER_SIDE_SYSTEM_PROMPT",
                 "http.timeout_seconds": "REQUEST_TIMEOUT_SECONDS",
+                "agents.max_parallel_experts": "AGENTS_MAX_PARALLEL",
+                "agents.max_experts_absolute": "AGENTS_MAX_PARALLEL_ABSOLUTE",
+                "agents.continue_on_subtask_error": "AGENTS_CONTINUE_ON_SUBTASK_ERROR",
+                "agents.planner_model_type": "AGENTS_PLANNER_MODEL_TYPE",
+                "agents.planner_model_scale": "AGENTS_PLANNER_MODEL_SCALE",
+                "agents.synthesizer_model_type": "AGENTS_SYNTHESIZER_MODEL_TYPE",
+                "agents.synthesizer_model_scale": "AGENTS_SYNTHESIZER_MODEL_SCALE",
+                "agents.max_tokens_per_subtask": "AGENTS_MAX_TOKENS_PER_SUBTASK",
+                "agents.max_tokens_synthesis": "AGENTS_MAX_TOKENS_SYNTHESIS",
             }
 
             for json_path, attr_name in mappings.items():
