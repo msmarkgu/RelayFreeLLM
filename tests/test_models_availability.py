@@ -18,7 +18,7 @@ async def _test_model(registry, provider_name, model_name):
     """Test a single model's availability."""
     try:
         client = registry.get_client(provider_name)
-        logger.info(f"Testing {provider_name} - {model_name}...")
+        logger.info(f"\nTesting {provider_name} - {model_name}...")
 
         response = await client.call_model_api(
             messages=[

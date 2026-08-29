@@ -5,34 +5,19 @@
       "url": "",
       "models": [
         {
-          "name": "zai-glm-4.7",
-          "type": "text",
-          "scale": "large",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 5,
-            "requests_per_hour": 900,
-            "requests_per_day": 14400,
-            "tokens_per_minute": 30000,
-            "tokens_per_hour": 1000000,
-            "tokens_per_day": 1000000
-          },
-          "Max_Context_Length": 64000
-        },
-        {
           "name": "gpt-oss-120b",
           "type": "text",
           "scale": "large",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 5,
-            "requests_per_hour": 900,
-            "requests_per_day": 14400,
-            "tokens_per_minute": 30000,
-            "tokens_per_hour": 1000000,
-            "tokens_per_day": 1000000
+            "requests_per_hour": 300,
+            "requests_per_day": 2400,
+            "tokens_per_minute": 90000,
+            "tokens_per_hour": 500000,
+            "tokens_per_day": 3000000
           },
-          "Max_Context_Length": 64000
+          "Max_Context_Length": 131000
         },
         {
           "name": "gemma-4-31b",
@@ -41,13 +26,13 @@
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 5,
-            "requests_per_hour": 900,
-            "requests_per_day": 14400,
-            "tokens_per_minute": 30000,
-            "tokens_per_hour": 1000000,
-            "tokens_per_day": 1000000
+            "requests_per_hour": 300,
+            "requests_per_day": 2400,
+            "tokens_per_minute": 90000,
+            "tokens_per_hour": 500000,
+            "tokens_per_day": 3000000
           },
-          "Max_Context_Length": 64000
+          "Max_Context_Length": 131000
         }
       ]
     },
@@ -56,17 +41,17 @@
       "url": "",
       "models": [
         {
-          "name": "llama-3.3-70b-versatile",
+          "name": "qwen/qwen3.8-27b",
           "type": "text",
           "scale": "large",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
-            "requests_per_hour": 1800,
+            "requests_per_hour": 300,
             "requests_per_day": 1000,
-            "tokens_per_minute": 12000,
-            "tokens_per_hour": 30000,
-            "tokens_per_day": 100000
+            "tokens_per_minute": 8000,
+            "tokens_per_hour": 500000,
+            "tokens_per_day": 2000000
           },
           "Max_Context_Length": 131000
         },
@@ -79,9 +64,9 @@
             "requests_per_minute": 30,
             "requests_per_hour": 300,
             "requests_per_day": 1000,
-            "tokens_per_minute": 6000,
+            "tokens_per_minute": 8000,
             "tokens_per_hour": 100000,
-            "tokens_per_day": 500000
+            "tokens_per_day": 200000
           },
           "Max_Context_Length": 32000
         },
@@ -92,10 +77,10 @@
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
-            "requests_per_hour": 100,
+            "requests_per_hour": 300,
             "requests_per_day": 1000,
             "tokens_per_minute": 8000,
-            "tokens_per_hour": 20000,
+            "tokens_per_hour": 100000,
             "tokens_per_day": 200000
           },
           "Max_Context_Length": 8000
@@ -107,10 +92,10 @@
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
-            "requests_per_hour": 100,
+            "requests_per_hour": 300,
             "requests_per_day": 1000,
             "tokens_per_minute": 8000,
-            "tokens_per_hour": 20000,
+            "tokens_per_hour": 100000,
             "tokens_per_day": 200000
           },
           "Max_Context_Length": 8000
@@ -122,10 +107,10 @@
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
-            "requests_per_hour": 100,
+            "requests_per_hour": 300,
             "requests_per_day": 1000,
             "tokens_per_minute": 8000,
-            "tokens_per_hour": 20000,
+            "tokens_per_hour": 100000,
             "tokens_per_day": 200000
           },
           "Max_Context_Length": 8000
@@ -152,7 +137,7 @@
       "url": "",
       "models": [
         {
-          "name": "mistral-large-latest",
+          "name": "devstral-2512",
           "type": "text",
           "scale": "large",
           "limits": {
@@ -197,22 +182,6 @@
             "tokens_per_day": 30000000
           },
           "Max_Context_Length": 262000
-        },
-        {
-          "name": "mistral-large-2512",
-          "type": "text",
-          "scale": "large",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 50,
-            "requests_per_hour": 3000,
-            "requests_per_day": 60000,
-            "tokens_per_minute": 50000,
-            "tokens_per_hour": 3000000,
-            "tokens_per_day": 30000000
-          },
-          "Max_Context_Length": 131000,
-          "modality": "vision"
         },
         {
           "name": "mistral-medium-2508",
@@ -321,7 +290,7 @@
           "Max_Context_Length": 8000
         },
         {
-          "name": "stepfun-ai/step-3.7-flash",
+          "name": "moonshotai/kimi-k3",
           "type": "text",
           "scale": "large",
           "limits": {
