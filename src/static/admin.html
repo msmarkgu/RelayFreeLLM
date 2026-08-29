@@ -10,8 +10,26 @@
 <div class="header">
   <div>
     <h1>RelayFreeLLM Admin</h1>
-    <div class="subtitle">Manage provider model limits &amp; view usage statistics</div>
+    <div class="subtitle">Manage provider model limits & view usage statistics</div>
   </div>
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <div id="header-status"></div>
+    <button id="btn-logout" class="btn btn-sm hidden">Logout</button>
+  </div>
+</div>
+
+<!-- Login form -->
+<div id="login-form" style="margin: 20px auto; max-width: 300px; text-align: center;">
+  <div style="background: #f8f9fa; padding: 20px; border-radius: 8; margin-bottom: 10px;">
+    <input type="text" id="login-token" class="form-input" placeholder="Admin auth token" style="width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box;">
+    <button id="btn-login" class="btn btn-primary w-full" style="width: 100%;">Login</button>
+  </div>
+  <div id="login-error" style="display: none; color: red; margin-top: 10; font-size: 0.9em;"></div>
+</div>
+
+<div class="tabs">
+</div>
+</div>
   <div id="header-status"></div>
 </div>
 

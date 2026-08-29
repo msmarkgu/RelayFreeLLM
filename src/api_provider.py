@@ -2,6 +2,7 @@ import json
 import os
 import random
 import time
+import asyncio
 from collections import deque
 
 from .api_limits_tracker import ApiLimitsTracker
@@ -15,8 +16,9 @@ class ApiProvider:
         self.models = models  # list of ModelAPIs
         self.last_used_index = -1  # for round-robin selection
         self.usage_counter = {}
+        self._provider_lock = asyncio.Lock()
 
-    def select_within(
+    async def select_within(
         self,
         num_of_tokens: int,
         strategy: str = "roundrobin",
@@ -34,37 +36,39 @@ class ApiProvider:
             model_type: Filter by model type (text, coding, image, speech, etc.)
             model_scale: Filter by model scale (large, medium, small)
             model_name: Filter by substring of model name
+            modality: Filter by modality (vision, text)
 
         Returns:
             Tuple of (model, wait_time)
         """
-        filtered_models = self.models
-        if model_type:
-            filtered_models = [m for m in filtered_models if m.model_type == model_type]
-        if model_scale:
-            filtered_models = [
-                m for m in filtered_models if m.model_scale == model_scale
-            ]
-        if model_name:
-            filtered_models = [
-                m
-                for m in filtered_models
-                if model_name.lower() in m.model_name.lower()
-            ]
-        if modality:
-            filtered_models = [
-                m for m in filtered_models if m.modality == modality
-            ]
+        async with self._provider_lock:
+            filtered_models = self.models
+            if model_type:
+                filtered_models = [m for m in filtered_models if m.model_type == model_type]
+            if model_scale:
+                filtered_models = [
+                    m for m in filtered_models if m.model_scale == model_scale
+                ]
+            if model_name:
+                filtered_models = [
+                    m
+                    for m in filtered_models
+                    if model_name.lower() in m.model_name.lower()
+                ]
+            if modality:
+                filtered_models = [
+                    m for m in filtered_models if m.modality == modality
+                ]
 
-        if not filtered_models:
-            return None, float("inf")
+            if not filtered_models:
+                return None, float("inf")
 
-        if strategy == "random":
-            return self._select_from_list_random(filtered_models, num_of_tokens)
-        else:
-            return self._select_from_list_roundrobin(filtered_models, num_of_tokens)
+            if strategy == "random":
+                return await self._select_from_list_random_async(filtered_models, num_of_tokens)
+            else:
+                return await self._select_from_list_roundrobin_async(filtered_models, num_of_tokens)
 
-    def _select_from_list_random(
+    async def _select_from_list_random_async(
         self, models: list[ApiLimitsTracker], num_of_tokens: int
     ) -> tuple[ApiLimitsTracker | None, float]:
         """Try to route request using random selection from given model list."""
@@ -75,7 +79,8 @@ class ApiProvider:
         for idx in indices:
             model = models[idx]
             if model.can_handle(num_of_tokens):
-                model.record_usage(num_of_tokens)
+                async with model._usage_lock:
+                    model.record_usage(num_of_tokens)
                 self.last_used_index = self.models.index(model)
                 self.usage_counter[model.model_name] = (
                     self.usage_counter.get(model.model_name, 0) + 1
@@ -85,7 +90,7 @@ class ApiProvider:
 
         return None, min(wait_times) if wait_times else float("inf")
 
-    def _select_from_list_roundrobin(
+    async def _select_from_list_roundrobin_async(
         self, models: list[ApiLimitsTracker], num_of_tokens: int
     ) -> tuple[ApiLimitsTracker | None, float]:
         """Try to route request using round-robin selection from given model list."""
@@ -107,7 +112,8 @@ class ApiProvider:
             curr_model = models[curr_index]
 
             if curr_model.can_handle(num_of_tokens):
-                curr_model.record_usage(num_of_tokens)
+                async with curr_model._usage_lock:
+                    curr_model.record_usage(num_of_tokens)
                 self.last_used_index = self.models.index(curr_model)
                 self.usage_counter[curr_model.model_name] = (
                     self.usage_counter.get(curr_model.model_name, 0) + 1

@@ -8,9 +8,12 @@ and viewing usage statistics. All data is persisted to JSON files.
 import json
 import os
 import mimetypes
+from typing import Literal
 
-from fastapi import APIRouter, Header, Request, HTTPException
+from fastapi import APIRouter, Body, Depends, Form, Header, Request, HTTPException, Security, status
+from typing import Optional
 from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from .logging_util import ProjectLogger
 
@@ -22,6 +25,41 @@ admin_router = APIRouter()
 logger = ProjectLogger.get_logger(__name__)
 
 mimetypes.init()
+
+# Bearer token authentication for admin API
+security = HTTPBearer()
+
+ADMIN_TOKENS_ENV = os.getenv("ADMIN_AUTH_TOKENS", "")
+ADMIN_VALID_TOKENS = set(t.strip() for t in ADMIN_TOKENS_ENV.split(",") if t.strip()) if ADMIN_TOKENS_ENV else set()
+
+
+def get_admin_token(
+    credentials: HTTPAuthorizationCredentials = Security(security),
+) -> str:
+    token = credentials.credentials
+    if not ADMIN_VALID_TOKENS:
+        # If no ADMIN_AUTH_TOKENS set, still require a token (empty set = auth required)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Admin authentication required. Set ADMIN_AUTH_TOKENS env var.",
+        )
+    if token not in ADMIN_VALID_TOKENS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid admin authentication token.",
+        )
+    return token
+
+
+# Track logged-in state per request state
+def set_admin_user(request: Request, token: str):
+    """Store authenticated user in request state."""
+    request.state.admin_token = token
+
+
+def get_admin_user(request: Request) -> Optional[str]:
+    """Get authenticated user token from request state."""
+    return getattr(request.state, "admin_token", None)
 
 
 @admin_router.get("/static/{filename}")
@@ -54,8 +92,21 @@ async def chat_ui():
         raise HTTPException(status_code=404, detail="Chat UI not found")
 
 
+@admin_router.post("/admin/api/login")
+async def login(request: Request, body: dict = Body(...)):
+    """Login endpoint - validates admin token and returns success."""
+    token = body.get("token", "")
+    if token in ADMIN_VALID_TOKENS:
+        set_admin_user(request, token)
+        return JSONResponse(content={"logged_in": True, "message": "Login successful."})
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid admin authentication token.",
+    )
+
+
 @admin_router.get("/admin/api/limits")
-async def get_limits():
+async def get_limits(request: Request, token: str = Depends(get_admin_token)):
     try:
         with open(LIMITS_FILE, "r") as f:
             return JSONResponse(content=json.load(f))
@@ -64,7 +115,10 @@ async def get_limits():
 
 
 @admin_router.put("/admin/api/limits")
-async def update_limits(request: Request):
+async def update_limits(
+    request: Request,
+    token: str = Depends(get_admin_token),
+):
     try:
         body = await request.json()
     except Exception:
@@ -106,7 +160,10 @@ async def update_limits(request: Request):
 
 
 @admin_router.get("/admin/api/usage")
-async def get_usage(request: Request):
+async def get_usage(
+    request: Request,
+    token: str = Depends(get_admin_token),
+):
     try:
         tracker = request.app.state.usage_tracker
         return JSONResponse(content=tracker.get_stats())
@@ -117,7 +174,10 @@ async def get_usage(request: Request):
 
 
 @admin_router.post("/admin/api/usage/reset")
-async def reset_usage(request: Request):
+async def reset_usage(
+    request: Request,
+    token: str = Depends(get_admin_token),
+):
     try:
         tracker = request.app.state.usage_tracker
         tracker.reset_stats()

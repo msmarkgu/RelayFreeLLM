@@ -9,6 +9,7 @@ import json
 import os
 import random
 import time
+import asyncio
 
 from .api_limits_tracker import ApiLimitsTracker
 from .api_provider import ApiProvider
@@ -92,7 +93,7 @@ class ModelSelector:
             return 0
         return int(len(text.split()) * 1.3)
 
-    def select(
+    async def select(
         self,
         user_input: str,
         system_prompt: str = "",
@@ -118,6 +119,35 @@ class ModelSelector:
         Returns:
             Tuple of (provider, model_name, wait_time)
         """
+        _is_async = False
+        try:
+            _is_async = asyncio.get_running_loop().is_running()
+        except RuntimeError:
+            _is_async = False
+
+        if _is_async:
+            return await self._select_async(
+                user_input, system_prompt, preferred_provider, exclude_providers,
+                model_type, model_scale, model_name, modality
+            )
+        else:
+            return self._select_sync(
+                user_input, system_prompt, preferred_provider, exclude_providers,
+                model_type, model_scale, model_name, modality
+            )
+
+    def _select_sync(
+        self,
+        user_input: str,
+        system_prompt: str = "",
+        preferred_provider: str | None = None,
+        exclude_providers: list[str] | None = None,
+        model_type: str | None = None,
+        model_scale: str | None = None,
+        model_name: str | None = None,
+        modality: str | None = None,
+    ) -> tuple[str, str, float]:
+        """Synchronous selection (for test compatibility)."""
         num_of_tokens = self.estimate_tokens(user_input) + self.estimate_tokens(
             system_prompt
         )
@@ -161,7 +191,87 @@ class ModelSelector:
 
         for prov_name in search_order:
             provider = self.providers[prov_name]
+            # In sync mode, just try the first available model without atomic locking
+            # (async mode handles atomicity via provider.select_within)
             model, wait_time = provider.select_within(
+                num_of_tokens,
+                strategy=self.model_strategy,
+                model_type=model_type,
+                model_scale=model_scale,
+                model_name=model_name,
+                modality=modality,
+            )
+
+            if model:
+                if prov_name in self.provider_sequence:
+                    self.last_provider_index = self.provider_sequence.index(prov_name)
+                return prov_name, model.model_name, 0.0
+
+            if wait_time < min_wait_time:
+                min_wait_time = wait_time
+                best_candidate = (prov_name, "wait")
+
+        if best_candidate:
+            return best_candidate[0], "", min_wait_time
+
+        raise RuntimeError("All models in all providers are at capacity. Try later.")
+
+    async def _select_async(
+        self,
+        user_input: str,
+        system_prompt: str = "",
+        preferred_provider: str | None = None,
+        exclude_providers: list[str] | None = None,
+        model_type: str | None = None,
+        model_scale: str | None = None,
+        model_name: str | None = None,
+        modality: str | None = None,
+    ) -> tuple[str, str, float]:
+        """Async selection with atomic quota reservation."""
+        num_of_tokens = self.estimate_tokens(user_input) + self.estimate_tokens(
+            system_prompt
+        )
+        exclude_set = set(exclude_providers) if exclude_providers else set()
+
+        if (
+            preferred_provider
+            and preferred_provider in self.providers
+            and preferred_provider not in exclude_set
+        ):
+            search_order = [preferred_provider] + [
+                p
+                for p in self.provider_sequence
+                if p != preferred_provider and p not in exclude_set
+            ]
+        elif self.provider_strategy == "random":
+            search_order = [p for p in self.provider_sequence if p not in exclude_set]
+            random.shuffle(search_order)
+        else:  # roundrobin
+            if self.last_provider_index == -1:
+                usable_indices = [
+                    i
+                    for i, p in enumerate(self.provider_sequence)
+                    if p not in exclude_set
+                ]
+                if not usable_indices:
+                    raise RuntimeError(
+                        "No available providers match selection criteria."
+                    )
+                self.last_provider_index = random.choice(usable_indices)
+
+            search_order = []
+            for i in range(len(self.provider_sequence)):
+                index = (self.last_provider_index + i + 1) % len(self.provider_sequence)
+                prov = self.provider_sequence[index]
+                if prov not in exclude_set:
+                    search_order.append(prov)
+
+        min_wait_time = float("inf")
+        best_candidate = None
+
+        for prov_name in search_order:
+            provider = self.providers[prov_name]
+            model, wait_time = await provider.select_within(
                 num_of_tokens,
                 strategy=self.model_strategy,
                 model_type=model_type,

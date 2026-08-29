@@ -7,6 +7,7 @@ and makes them available to routes via app.state.
 """
 
 import logging
+import os
 import sys
 from contextlib import asynccontextmanager
 
@@ -104,9 +105,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# CORS: restrict origins in production. Allow wildcard only if explicitly configured.
+allow_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if allow_origins_env:
+    allow_origins = [o.strip() for o in allow_origins_env.split(",") if o.strip()]
+else:
+    # Development: allow local origins; Production should set ALLOWED_ORIGINS
+    allow_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

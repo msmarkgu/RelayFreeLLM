@@ -22,10 +22,15 @@ class ChatMessage(BaseModel):
     string, or a list of structured content parts (e.g. text + image_url).
     Use `get_text()` to flatten to a plain string for downstream consumers
     that don't yet handle structured content.
+
+    Supports OpenAI-specified roles: system, user, assistant, tool, function.
+    Contains `tool_calls` and `tool_call_id` for tool use support.
     """
 
-    role: Literal["system", "user", "assistant"]
+    role: Literal["system", "user", "assistant", "tool", "function"]
     content: Union[str, list[Any]]
+    tool_calls: list[dict] = []
+    tool_call_id: str = ""
 
     def get_text(self) -> str:
         """Extract plain text from content.
@@ -107,7 +112,9 @@ class ChoiceMessage(BaseModel):
     """The message content within a choice."""
 
     role: str = "assistant"
-    content: str
+    content: str = ""
+    tool_calls: list[dict] = []
+    tool_call_id: str = ""
 
 
 class Choice(BaseModel):

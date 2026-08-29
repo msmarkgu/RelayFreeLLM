@@ -72,12 +72,27 @@ class ContextManager:
     
     def _select_static(self, full_history: List[ChatMessage], target_context_tokens: int) -> List[ChatMessage]:
         """
-        Static mode: Keep last N messages verbatim.
+        Static mode: Keep last N messages verbatim, bounded by target_context_tokens.
         
-        Simple and safe - always returns the same number of recent messages.
+        Returns recent messages such that their estimated token count does not exceed
+        target_context_tokens. Falls back to static_recent_keep if token counting fails.
         """
-        # For now, we'll use a fixed number of messages
-        # In a more sophisticated version, we'd count tokens and adjust N
+        # Try to find how many recent messages fit within target_context_tokens
+        estimated_tokens = 0
+        selected = []
+        
+        # Iterate from the end of history backwards
+        for msg in reversed(full_history):
+            msg_tokens = self._estimate_tokens(msg.get_text())
+            if estimated_tokens + msg_tokens > target_context_tokens:
+                break
+            estimated_tokens += msg_tokens
+            selected.insert(0, msg)
+        
+        if selected:
+            return selected
+        
+        # Fallback: use fixed number of messages
         return full_history[-self.static_recent_keep:] if len(full_history) > self.static_recent_keep else full_history
     
     def _select_dynamic(
@@ -87,41 +102,35 @@ class ContextManager:
         target_context_tokens: int
     ) -> List[ChatMessage]:
         """
-        Dynamic mode: Adjust context amount based on actual usage.
+        Dynamic mode: Adjust context amount based on actual token usage.
         
-        If we've been using less than our target, we can use more (up to a limit).
-        If we've been using more, we use less.
+        Uses _estimate_tokens to count actual message tokens and ensures the
+        selected history does not exceed target_context_tokens.
         """
-        # Get recent usage for this session
-        recent_usages = self._usage_history.get(session_id, [])
+        # Estimate total tokens of full history
+        total_tokens = sum(self._estimate_tokens(msg.get_text()) for msg in full_history)
         
-        # Calculate average recent usage
-        if recent_usages:
-            avg_usage = sum(recent_usages) / len(recent_usages)
-            # If we've been using less than target, we can boost up
-            if avg_usage < target_context_tokens * self.dynamic_utilization_target:
-                boost_factor = min(
-                    self.dynamic_max_boost,
-                    (target_context_tokens * self.dynamic_utilization_target) / max(avg_usage, 1)
-                )
-                adjusted_target = int(target_context_tokens * boost_factor)
-            else:
-                # We've been using enough or more, use target or slightly less
-                adjusted_target = int(target_context_tokens * self.dynamic_utilization_target)
-        else:
-            # No history, use target utilization
-            adjusted_target = int(target_context_tokens * self.dynamic_utilization_target)
+        if total_tokens <= target_context_tokens:
+            # Full history fits, use it all
+            return full_history
         
-        # But don't go below a minimum or above our hard limit
-        adjusted_target = max(
-            int(target_context_tokens * self.dynamic_min_utilization),
-            min(adjusted_target, target_context_tokens)
-        )
+        # Select messages from the end, staying within token budget
+        estimated_tokens = 0
+        selected = []
         
-        # For now, use static selection with adjusted target as message count
-        # In a full implementation, we'd count actual tokens
-        estimated_messages = max(1, int(adjusted_target / 50))  # Rough estimate: 50 tokens per message
-        return full_history[-estimated_messages:] if len(full_history) > estimated_messages else full_history
+        # Iterate from the end of history backwards
+        for msg in reversed(full_history):
+            msg_tokens = self._estimate_tokens(msg.get_text())
+            if estimated_tokens + msg_tokens > target_context_tokens:
+                break
+            estimated_tokens += msg_tokens
+            selected.insert(0, msg)
+        
+        if selected:
+            return selected
+        
+        # Fallback: use at least one message
+        return [full_history[-1]] if full_history else []
     
     def _select_reservoir(
         self, 

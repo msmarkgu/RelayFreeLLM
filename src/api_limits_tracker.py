@@ -2,6 +2,7 @@ import json
 import os
 import random
 import time
+import asyncio
 from collections import deque
 
 CUR_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -26,6 +27,7 @@ class ApiLimitsTracker:
         self.max_context_length = max_context_length
         self.modality = modality
         self.cooldown_until = 0
+        self._usage_lock = asyncio.Lock()
 
         # Usage tracking
         self.deque_req_sec = deque()  # usually 1 request per second

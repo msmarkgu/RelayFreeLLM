@@ -174,7 +174,7 @@ class ModelDispatcher:
                             model_name = vision_model
                         else:
                             try:
-                                new_provider, new_model, _ = self.selector.select(
+                                new_provider, new_model, _ = await self.selector.select(
                                     user_prompt,
                                     sys_prompt,
                                     modality="vision",
@@ -272,7 +272,7 @@ class ModelDispatcher:
 
         while attempt < max_retries:
             try:
-                provider_name, model_name, wait_time = self.selector.select(
+                provider_name, model_name, wait_time = await self.selector.select(
                     user_prompt,
                     sys_prompt,
                     preferred_provider=preferred_provider if attempt == 0 else None,

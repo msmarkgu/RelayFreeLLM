@@ -38,7 +38,7 @@ class Settings:
         self.OLLAMA_BASE_URL = "http://localhost:11434"
 
         # Server
-        self.HOST = "0.0.0.0"
+        self.HOST = "127.0.0.1"
         self.PORT = 8000
         self.LOG_LEVEL = "INFO"
         self.SESSION_ID_HEADER = "X-Session-ID"

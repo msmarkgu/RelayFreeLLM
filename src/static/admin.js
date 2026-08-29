@@ -1,5 +1,17 @@
 let limitsData = null;
 let limitsDirty = false;
+let authToken = null;
+
+// Check for stored token on page load
+document.addEventListener('DOMContentLoaded', function() {
+  const stored = localStorage.getItem('rflm_admin_token');
+  if (stored) {
+    authToken = stored;
+    document.getElementById('login-form').classList.add('hidden');
+    document.getElementById('btn-logout').classList.remove('hidden');
+    updateHeaderStatus('logged-in');
+  }
+});
 
 function toast(msg, type) {
   if (type === undefined) type = 'success';
@@ -13,6 +25,86 @@ function toast(msg, type) {
     setTimeout(function () { el.remove(); }, 300);
   }, 3000);
 }
+
+function updateHeaderStatus(status) {
+  const el = document.getElementById('header-status');
+  if (status === 'logged-in') {
+    el.innerHTML = '<span style="color: green; font-weight: bold;">✓ Logged in</span>';
+  } else {
+    el.innerHTML = '<span style="color: red;">✗ Not logged in</span>';
+  }
+}
+
+function logout() {
+  authToken = null;
+  localStorage.removeItem('rflm_admin_token');
+  document.getElementById('login-form').classList.remove('hidden');
+  document.getElementById('btn-logout').classList.add('hidden');
+  updateHeaderStatus('logged-out');
+  toast('Logged out');
+}
+
+function login() {
+  const tokenInput = document.getElementById('login-token');
+  const token = tokenInput.value.trim();
+  const errorEl = document.getElementById('login-error');
+  
+  if (!token) {
+    errorEl.style.display = 'block';
+    errorEl.textContent = 'Token is required';
+    return;
+  }
+  
+  errorEl.style.display = 'none';
+  
+  fetch('/admin/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token })
+  })
+  .then(res => {
+    if (!res.ok) return res.text().then(text => { throw new Error(text || 'Login failed'); });
+    return res.json();
+  })
+  .then(data => {
+    if (data.logged_in) {
+      authToken = token;
+      localStorage.setItem('rflm_admin_token', token);
+      document.getElementById('login-form').classList.add('hidden');
+      document.getElementById('btn-logout').classList.remove('hidden');
+      updateHeaderStatus('logged-in');
+      toast('Login successful');
+      // Refresh limits after login
+      loadLimits();
+      renderUsage();
+    } else {
+      throw new Error(data.message || 'Login failed');
+    }
+  })
+  .catch(e => {
+    errorEl.style.display = 'block';
+    errorEl.textContent = e.message || 'Login failed';
+  });
+}
+
+// Helper: fetch with auth token
+async function fetchWithAuth(url, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+  if (authToken) {
+    headers['Authorization'] = 'Bearer ' + authToken;
+  }
+  const res = await fetch(url, { ...options, headers });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error('HTTP ' + res.status + ': ' + txt);
+  }
+  return res.json();
+}
+
+// Replace direct fetch calls with fetchWithAuth in the following functions:
 
 document.querySelectorAll('.tab-btn').forEach(function (btn) {
   btn.addEventListener('click', function () {
@@ -28,9 +120,8 @@ async function loadLimits() {
   const el = document.getElementById('limits-content');
   el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
-    const res = await fetch('/admin/api/limits');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    limitsData = await res.json();
+    const data = await fetchWithAuth('/admin/api/limits');
+    limitsData = data;
     limitsDirty = false;
     renderLimits();
   } catch (e) {
@@ -162,13 +253,11 @@ document.getElementById('btn-save-limits').addEventListener('click', async funct
   if (!limitsDirty) { toast('No changes to save.', 'error'); return; }
   var data = collectLimits();
   try {
-    var res = await fetch('/admin/api/limits', {
+    var result = await fetchWithAuth('/admin/api/limits', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + await res.text());
-    var result = await res.json();
     toast(result.message || 'Limits saved successfully.');
     limitsDirty = false;
     await loadLimits();
@@ -235,9 +324,7 @@ async function renderUsage() {
   var el = document.getElementById('usage-content');
   el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
-    var res = await fetch('/admin/api/usage');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    var data = await res.json();
+    var data = await fetchWithAuth('/admin/api/usage');
     renderUsageData(data, el);
   } catch (e) {
     el.innerHTML = '<div class="empty-state"><p>Failed to load usage stats</p><div class="hint">' + e.message + '</div></div>';
@@ -292,6 +379,10 @@ function fmt(n) { return typeof n === 'number' ? n.toLocaleString() : n; }
 
 document.getElementById('btn-refresh-usage').addEventListener('click', renderUsage);
 
+document.getElementById('btn-login').addEventListener('click', login);
+
+document.getElementById('btn-logout').addEventListener('click', logout);
+
 document.getElementById('btn-reset-usage').addEventListener('click', function () {
   document.getElementById('reset-modal').classList.remove('hidden');
 });
@@ -301,9 +392,8 @@ document.getElementById('modal-reset-cancel').addEventListener('click', function
 document.getElementById('modal-reset-confirm').addEventListener('click', async function () {
   document.getElementById('reset-modal').classList.add('hidden');
   try {
-    var res = await fetch('/admin/api/usage/reset', { method: 'POST' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    toast('Usage stats reset.');
+    var result = await fetchWithAuth('/admin/api/usage/reset', { method: 'POST' });
+    toast(result.message || 'Usage stats reset.');
     await renderUsage();
   } catch (e) {
     toast('Reset failed: ' + e.message, 'error');
