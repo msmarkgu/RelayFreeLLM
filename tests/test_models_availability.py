@@ -79,6 +79,10 @@ async def main():
         if provider_name not in providers_to_test:
             continue
 
+        if provider_data.get("enabled", True) is False:
+            logger.info(f"Skipping disabled provider {provider_name}.")
+            continue
+
         try:
             api_key_name = f"{provider_name.upper()}_APIKEY"
             if provider_name == "Ollama":

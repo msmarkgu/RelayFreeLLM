@@ -54,10 +54,18 @@ function renderLimits() {
   var html = '';
   for (var pi = 0; pi < limitsData.providers.length; pi++) {
     var prov = limitsData.providers[pi];
-    html += '<div class="provider-card" data-provider-index="' + pi + '">';
+    var enabled = prov.enabled !== false;
+    html += '<div class="provider-card' + (enabled ? '' : ' provider-disabled') + '" data-provider-index="' + pi + '">';
     html += '<div class="provider-header" onclick="toggleProvider(this)">';
-    html += '<div><span class="chevron">\u25bc</span> <span class="name">' + esc(prov.name) + '</span> <span class="model-count">' + prov.models.length + ' model' + (prov.models.length !== 1 ? 's' : '') + '</span></div>';
-    html += '<div><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeProvider(' + pi + ')">Remove</button></div>';
+    html += '<div><span class="chevron">\u25bc</span> <span class="name">' + esc(prov.name) + '</span> <span class="model-count">' + prov.models.length + ' model' + (prov.models.length !== 1 ? 's' : '') + '</span>';
+    if (!enabled) { html += '<span class="badge badge-disabled">Disabled</span>'; }
+    html += '</div>';
+    html += '<div class="provider-controls">';
+    html += '<label class="toggle-label" onclick="event.stopPropagation();">';
+    html += '<input type="checkbox" class="provider-enabled-toggle" data-pi="' + pi + '"' + (enabled ? ' checked' : '') + '> Enabled';
+    html += '</label>';
+    html += '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeProvider(' + pi + ')">Remove</button>';
+    html += '</div>';
     html += '</div>';
     html += '<div class="provider-body">';
     html += '<div class="table-wrap">';
@@ -98,6 +106,28 @@ function renderLimits() {
   el.querySelectorAll('input, select').forEach(function (el_) {
     el_.addEventListener('change', function () { limitsDirty = true; });
     el_.addEventListener('input', function () { limitsDirty = true; });
+  });
+
+  el.querySelectorAll('.provider-enabled-toggle').forEach(function (el_) {
+    el_.addEventListener('change', function () {
+      limitsDirty = true;
+      var card = el_.closest('.provider-card');
+      if (card) {
+        if (el_.checked) {
+          card.classList.remove('provider-disabled');
+          var b = card.querySelector('.badge-disabled');
+          if (b) b.remove();
+        } else {
+          card.classList.add('provider-disabled');
+          var nameEl = card.querySelector('.provider-header .name');
+          var badge = document.createElement('span');
+          badge.className = 'badge badge-disabled';
+          badge.textContent = 'Disabled';
+          if (nameEl)
+            nameEl.insertAdjacentElement('afterend', badge);
+        }
+      }
+    });
   });
 }
 
@@ -153,7 +183,9 @@ function collectLimits() {
       }
       models.push(model);
     }
-    data.providers.push({ name: provName, url: (orig && orig.url) || '', models: models });
+    var toggle = card.querySelector('.provider-enabled-toggle');
+    var enabled = toggle ? toggle.checked : true;
+    data.providers.push({ name: provName, url: (orig && orig.url) || '', enabled: enabled, models: models });
   }
   return data;
 }

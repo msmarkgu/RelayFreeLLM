@@ -72,6 +72,7 @@ GEMINI_APIKEY=      # ai.google.dev
 GROQ_APIKEY=        # console.groq.com
 MISTRAL_APIKEY=     # console.mistral.ai
 NVIDIA_APIKEY=      # build.nvidia.com
+SAMBANOVA_APIKEY=   # cloud.sambanova.ai
 ```
 
 ### 3. Verify connectivity (optional but recommended)

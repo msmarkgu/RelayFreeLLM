@@ -32,7 +32,10 @@ def setup_selector(provider_strat, model_strat):
         "P2": create_mock_provider("P2", ["M3", "M4"])
     }
     
-    with patch("src.model_selector.ModelSelector.load_api_limits_from_json", return_value=test_providers):
+    with patch(
+        "src.model_selector.ModelSelector.load_api_limits_from_json",
+        return_value=(test_providers, {}, set(test_providers.keys())),
+    ):
         return ModelSelector(
             provider_sequence=["P1", "P2"],
             provider_strategy=provider_strat,

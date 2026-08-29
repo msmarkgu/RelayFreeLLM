@@ -648,6 +648,12 @@ class ModelDispatcher:
         discovered = {}
 
         clients = self.registry.all_clients()
+        enabled_providers = set(getattr(self.selector, "providers", {}).keys())
+        clients = {
+            name: client
+            for name, client in clients.items()
+            if name in enabled_providers
+        }
         tasks = {
             name: asyncio.create_task(client.list_models())
             for name, client in clients.items()

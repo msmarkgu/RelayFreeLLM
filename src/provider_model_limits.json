@@ -3,6 +3,7 @@
     {
       "name": "Cerebras",
       "url": "",
+      "enabled": false,
       "models": [
         {
           "name": "gpt-oss-120b",
@@ -39,6 +40,7 @@
     {
       "name": "Groq",
       "url": "",
+      "enabled": true,
       "models": [
         {
           "name": "qwen/qwen3.8-27b",
@@ -135,6 +137,7 @@
     {
       "name": "Mistral",
       "url": "",
+      "enabled": true,
       "models": [
         {
           "name": "devstral-2512",
@@ -251,6 +254,7 @@
     {
       "name": "Gemini",
       "url": "",
+      "enabled": true,
       "models": [
         {
           "name": "gemini-2.5-flash",
@@ -273,6 +277,7 @@
     {
       "name": "Nvidia",
       "url": "https://build.nvidia.com/explore/discover/models",
+      "enabled": true,
       "models": [
         {
           "name": "minimaxai/minimax-m3",
@@ -303,6 +308,73 @@
             "tokens_per_day": -1
           },
           "Max_Context_Length": 16000
+        }
+      ]
+    },
+    {
+      "name": "SambaNova",
+      "url": "https://cloud.sambanova.ai",
+      "enabled": false,
+      "models": [
+        {
+          "name": "MiniMax-M2.7",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 20,
+            "requests_per_day": 20,
+            "tokens_per_minute": 200000,
+            "tokens_per_hour": 200000,
+            "tokens_per_day": 200000
+          },
+          "Max_Context_Length": 192000
+        },
+        {
+          "name": "DeepSeek-V3.1",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 20,
+            "requests_per_day": 20,
+            "tokens_per_minute": 200000,
+            "tokens_per_hour": 200000,
+            "tokens_per_day": 200000
+          },
+          "Max_Context_Length": 128000
+        },
+        {
+          "name": "Meta-Llama-3.3-70B-Instruct",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 20,
+            "requests_per_day": 20,
+            "tokens_per_minute": 200000,
+            "tokens_per_hour": 200000,
+            "tokens_per_day": 200000
+          },
+          "Max_Context_Length": 128000
+        },
+        {
+          "name": "gpt-oss-120b",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 20,
+            "requests_per_day": 20,
+            "tokens_per_minute": 200000,
+            "tokens_per_hour": 200000,
+            "tokens_per_day": 200000
+          },
+          "Max_Context_Length": 128000
         }
       ]
     }
