@@ -1,5 +1,6 @@
 """Tests for the provider-level 'enabled' flag in the registry."""
 
+import asyncio
 import json
 
 import pytest
@@ -116,6 +117,10 @@ def test_save_registry_preserves_enabled_default(tmp_path):
     assert data["providers"][0]["enabled"] is True
 
 
+async def _select_disabled_provider(selector):
+    return await selector.select("prompt", preferred_provider="Beta")
+
+
 def test_disabled_provider_not_selected(tmp_path):
     selector = _make_selector(
         tmp_path,
@@ -125,6 +130,6 @@ def test_disabled_provider_not_selected(tmp_path):
         ],
     )
     for _ in range(10):
-        provider, model, wait = selector.select("prompt", preferred_provider="Beta")
+        provider, model, wait = asyncio.run(_select_disabled_provider(selector))
         assert provider == "Alpha"
         assert provider != "Beta"
