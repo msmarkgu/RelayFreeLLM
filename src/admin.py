@@ -148,9 +148,12 @@ async def update_limits(
     try:
         selector = request.app.state.selector
         if selector:
-            new_providers = selector.load_api_limits_from_json(selector.registry_file)
+            new_providers, new_disabled, new_known = selector.load_api_limits_from_json(selector.registry_file)
             selector.providers.clear()
             selector.providers.update(new_providers)
+            selector.disabled_providers.clear()
+            selector.disabled_providers.update(new_disabled)
+            selector.known_providers = new_known
             selector.provider_sequence = list(new_providers.keys())
             logger.info("Model limits hot-reloaded from admin dashboard")
     except Exception as e:

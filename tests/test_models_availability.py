@@ -18,7 +18,7 @@ async def _test_model(registry, provider_name, model_name):
     """Test a single model's availability."""
     try:
         client = registry.get_client(provider_name)
-        logger.info(f"Testing {provider_name} - {model_name}...")
+        logger.info(f"\nTesting {provider_name} - {model_name}...")
 
         response = await client.call_model_api(
             messages=[
@@ -77,6 +77,10 @@ async def main():
         provider_name = provider_data["name"]
 
         if provider_name not in providers_to_test:
+            continue
+
+        if provider_data.get("enabled", True) is False:
+            logger.info(f"Skipping disabled provider {provider_name}.")
             continue
 
         try:

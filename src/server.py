@@ -48,7 +48,10 @@ async def lifespan(app: FastAPI):
 
     # --- SYNCHRONIZE AND VALIDATE ---
     registered_providers = set(registry.list_providers())
-    json_providers = set(selector.providers.keys())
+    # All providers present in the JSON registry (enabled or disabled). Disabled
+    # providers keep their client registered so they can be re-enabled at runtime
+    # via the admin UI, but they are excluded from routing by the selector.
+    json_providers = set(selector.known_providers)
 
     active_providers = registered_providers.intersection(json_providers)
 
@@ -58,7 +61,7 @@ async def lifespan(app: FastAPI):
             logger.warning(f"Provider '{p}' has credentials/code but lacks JSON limits! Pruning.")
             registry.unregister(p)
 
-    for p in list(json_providers):
+    for p in list(selector.providers.keys()):
         if p not in active_providers:
             logger.warning(f"Provider '{p}' has JSON limits but lacks credentials/code! Pruning.")
             selector.remove_provider(p)

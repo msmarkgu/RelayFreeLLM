@@ -39,7 +39,7 @@ class ModelSelector:
     ):
         self.logger = ProjectLogger.get_logger(__name__)
         self.registry_file = settings.REGISTRY_FILE
-        self.providers = self.load_api_limits_from_json(self.registry_file)
+        self.providers, self.disabled_providers, self.known_providers = self.load_api_limits_from_json(self.registry_file)
 
         self.logger.info("Providers: %s", self.providers)
 
@@ -55,13 +55,16 @@ class ModelSelector:
             self.model_strategy,
         )
 
-    def load_api_limits_from_json(self, path: str) -> dict[str, ApiProvider]:
+    def load_api_limits_from_json(self, path: str) -> tuple[dict[str, ApiProvider], dict[str, ApiProvider], set[str]]:
         with open(path, "r") as f:
             data = json.load(f)
 
         providers = {}
+        disabled_providers = {}
+        known_providers = set()
         for prov in data["providers"]:
             provider_name = prov["name"]
+            known_providers.add(provider_name)
             models = []
             for m in prov["models"]:
                 metadata = get_model_metadata(m["name"])
@@ -76,9 +79,13 @@ class ModelSelector:
                         modality=m.get("modality", "text"),
                     )
                 )
-            providers[provider_name] = ApiProvider(provider_name, models)
+            if prov.get("enabled", True) is False:
+                self.logger.info(f"Skipping disabled provider '{provider_name}'.")
+                disabled_providers[provider_name] = ApiProvider(provider_name, models)
+            else:
+                providers[provider_name] = ApiProvider(provider_name, models)
 
-        return providers
+        return providers, disabled_providers, known_providers
 
     def remove_provider(self, name: str) -> None:
         """Remove an assigned provider if it fails implementation constraints."""
@@ -488,7 +495,22 @@ class ModelSelector:
         """Serialize current providers and models back to the registry file."""
         data = {"providers": []}
         for provider_name, provider in self.providers.items():
-            prov_data = {"name": provider_name, "url": "", "models": []}
+            prov_data = {"name": provider_name, "url": "", "enabled": True, "models": []}
+            for model in provider.models:
+                prov_data["models"].append(
+                    {
+                        "name": model.model_name,
+                        "type": model.model_type,
+                        "scale": model.model_scale,
+                        "limits": model.limits,
+                        "Max_Context_Length": model.max_context_length,
+                        "modality": model.modality,
+                    }
+                )
+            data["providers"].append(prov_data)
+
+        for provider_name, provider in getattr(self, "disabled_providers", {}).items():
+            prov_data = {"name": provider_name, "url": "", "enabled": False, "models": []}
             for model in provider.models:
                 prov_data["models"].append(
                     {
