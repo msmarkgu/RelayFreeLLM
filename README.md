@@ -13,6 +13,8 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="fake")
 
 No code changes. No retry logic. No 429 errors breaking your app.
 
+It also speaks the **Anthropic Messages API**, so coding agents like **Claude Code** can run against the same local gateway with tool calling, streaming, and Claude-style model aliases.
+
 ---
 
 ## The Free Tier Problem → The RelayFreeLLM Solution
@@ -31,6 +33,8 @@ No code changes. No retry logic. No 429 errors breaking your app.
 | Feature | Why It Matters |
 |---------|----------------|
 | **OpenAI-compatible** | Drop-in for your existing code. LangChain, LlamaIndex, any SDK. |
+| **Anthropic-compatible** | `POST /v1/messages` and `POST /v1/messages/count_tokens` for Claude Code and other Anthropic clients. |
+| **Agent tool calling** | OpenAI-style `tools`/`tool_choice` and Anthropic `tool_use`/`tool_result` blocks, with native passthrough on supported providers. |
 | **Automatic Failover** | Provider down? One model hit limits? We try the next one automatically. Zero downtime. |
 | **Session Affinity** | Pin conversations to a provider via `X-Session-ID` for context caching benefits. |
 | **4-Mode Context Management** | Static, Dynamic, Reservoir, Adaptive — with extractive summarization to preserve long conversations. |
@@ -41,6 +45,8 @@ No code changes. No retry logic. No 429 errors breaking your app.
 | **Chat UI** | Built-in web chat interface at [`/chat`](http://localhost:8000/chat) — streaming, conversation history, dark/light mode, Browser or Server storage. |
 | **Local + Cloud** | Mix your private Ollama instance with cloud free tiers seamlessly. |
 | **Admin Dashboard** | Visual editor for provider limits and real-time usage monitoring at [`/admin`](http://localhost:8000/admin) — no manual JSON editing or server restarts. |
+| **Local-first security** | Binds to `127.0.0.1` by default, restricts CORS to localhost origins, and supports an optional bearer token via `RELAY_AUTH_TOKEN`. |
+| **Honest errors & usage** | Real HTTP status codes, structured error envelopes, and estimated token counts on both non-streaming responses and the final SSE chunk. |
 
 ---
 
@@ -52,6 +58,7 @@ No code changes. No retry logic. No 429 errors breaking your app.
 | **Students & hobbyists** | GPT-level AI, no credit card or phone number required |
 | **Self-hosters** | Combine Ollama privacy with cloud capacity |
 | **Researchers** | Batch queries across providers for higher throughput |
+| **Coding-agent users** | Run Claude Code locally against free tiers via the Anthropic Messages API |
 
 **Community:** 120+ GitHub stars, 10+ forks, 20+ models from 6 providers included. Active development — 70+ commits in 12 weeks.
 
@@ -74,6 +81,16 @@ MISTRAL_APIKEY=     # console.mistral.ai
 NVIDIA_APIKEY=      # build.nvidia.com
 SAMBANOVA_APIKEY=   # cloud.sambanova.ai
 ```
+
+### 2.1 Protect the gateway (optional, recommended for agent use)
+
+Add a token to `.env` to require `Authorization: Bearer <token>` on all API and admin routes:
+
+```bash
+RELAY_AUTH_TOKEN=your-random-secret
+```
+
+Health checks (`/` and `/health`) stay public so launchers can poll readiness. The server binds to `127.0.0.1` by default and only allows CORS requests from `localhost`/`127.0.0.1`. When running in Docker, the image sets `HOST=0.0.0.0`; publish only to loopback (`-p 127.0.0.1:8000:8000`) to keep the gateway local.
 
 ### 3. Verify connectivity (optional but recommended)
 ```bash
@@ -249,6 +266,53 @@ The standard system prompt injection can be disabled per-request by sending the 
 ### Session Affinity
 Pass `X-Session-ID: user-123` and the gateway pins that user to a single provider. If that provider fails, the session automatically migrates.
 
+### Tool Calling
+
+Chat Completions clients can send OpenAI-style tool definitions. Tool requests are routed only to providers that support native tool calling, and `tool_use`/`tool_result` pairs are kept intact instead of being summarised by the context manager.
+
+```python
+response = client.chat.completions.create(
+    model="meta-model",
+    messages=[{"role": "user", "content": "What's the weather in Paris?"}],
+    tools=[{
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get current weather",
+            "parameters": {
+                "type": "object",
+                "properties": {"city": {"type": "string"}},
+                "required": ["city"],
+            },
+        },
+    }],
+)
+
+call = response.choices[0].message.tool_calls[0]
+# Execute the tool client-side, then append the result and call again:
+# {"role": "tool", "tool_call_id": call.id, "content": "18°C, cloudy"}
+```
+
+Streaming tool calls emit `delta.tool_calls` fragments plus a final chunk with `finish_reason: "tool_calls"`.
+
+Providers with native tool passthrough: **Groq, Cerebras, NVIDIA, SambaNova, Ollama, DeepSeek, Cloudflare**. Gemini and Mistral can be used for text but are excluded from tool-enabled routing.
+
+### Errors & Usage
+
+Failures now return meaningful HTTP statuses (400/401/429/500/502) with an OpenAI-style envelope:
+
+```json
+{"error": {"message": "All retries failed...", "type": "upstream_error"}}
+```
+
+Streaming failures emit a final `data: {"error": {...}}` event instead of a fake `finish_reason: "error"`. Successful streams end with a usage chunk:
+
+```json
+{"usage": {"prompt_tokens": 12, "completion_tokens": 34, "total_tokens": 46}}
+```
+
+Token counts are estimated locally (not provider-reported), but are always non-zero so harness context budgeting works.
+
 ### Agent Framework Support
 Agent frameworks (LangChain, AutoGen, CrewAI) manage their own system prompt and conversation history. To prevent the gateway from injecting its standard prompt or reconstructing the message array, send the header:
 
@@ -258,7 +322,7 @@ X-Use-ServerSide-System-Prompt: false
 
 Behaviour when `false` (either per-request header or server `settings.json` default):
 
-- The client's `messages` array is forwarded verbatim, preserving message order and roles (including `tool` and `function` roles in the future).
+- The client's `messages` array is forwarded verbatim, preserving message order and roles (including `assistant` messages with `tool_calls` and `tool` result messages).
 - No server-side `STANDARD_SYSTEM_PROMPT` or style directive is injected.
 - The client's own system message (if any) is used without augmentation.
 - If the client sent no system message, no system message is sent to the provider.
@@ -288,6 +352,8 @@ The Reservoir mode uses a **TF-scoring algorithm** to identify the most informat
 
 ## API Reference
 
+All API and admin routes accept `Authorization: Bearer $RELAY_AUTH_TOKEN` when `RELAY_AUTH_TOKEN` is set. `/` and `/health` remain public.
+
 ### `POST /v1/chat/completions`
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -297,11 +363,39 @@ The Reservoir mode uses a **TF-scoring algorithm** to identify the most informat
 | `model_type` | string | Filter: `text`, `coding`, `image`, `speech`, `embedding`, `moderation`, `ocr` |
 | `model_scale` | string | Filter: `large`, `medium`, `small` |
 | `model_name` | string | Match model name substring |
+| `tools` | array | OpenAI-style function tool definitions. Restricts routing to tool-capable providers. |
+| `tool_choice` | string or object | `"auto"`, `"required"`, or `{"type": "function", "function": {"name": "..."}}` |
+
+### `POST /v1/messages` (Anthropic)
+
+Accepts the Anthropic Messages request shape: `model`, `max_tokens`, `messages` with `text`/`image`/`tool_use`/`tool_result`/`thinking` content blocks, optional `system`, `tools`, `tool_choice`, `temperature`, and `stream`. Returns an Anthropic message object or Anthropic SSE events (`message_start`, `content_block_start`, `content_block_delta`, `content_block_stop`, `message_delta`, `message_stop`, `error`).
+
+```python
+import anthropic
+
+client = anthropic.Anthropic(
+    base_url="http://localhost:8000",
+    api_key="relay-free",  # or RELAY_AUTH_TOKEN
+)
+message = client.messages.create(
+    model="claude-sonnet-5-5",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+```
+
+Errors use the Anthropic envelope `{"type": "error", "error": {"type": "...", "message": "..."}}`.
+
+### `POST /v1/messages/count_tokens`
+
+Estimates input tokens for an Anthropic Messages request and returns `{"input_tokens": N}`.
 
 ### `GET /v1/models`
 ```bash
 curl http://localhost:8000/v1/models?type=coding&scale=large
 ```
+
+Requests carrying an `anthropic-version` header receive the Claude tier aliases instead of the raw provider catalog.
 
 > **Multi-modal content:** The `content` field in each message accepts either a plain string or a list of content parts (e.g. `[{"type": "text", "text": "..."}, {"type": "image_url", "url": "..."}]`), matching the OpenAI Chat Completions spec. When image parts are present, the dispatcher automatically routes to vision-capable models only (see [Image-Aware Routing](#image-aware-routing)). Text parts are flattened before being sent to providers that don't support structured content.
 >
@@ -462,27 +556,71 @@ Default rate limits in [`provider_model_limits.json`](src/provider_model_limits.
 
 ## Using Claude Code
 
-RelayFreeLLM exposes the Anthropic Messages API in addition to OpenAI Chat Completions.
+RelayFreeLLM can act as a local Anthropic backend for Claude Code. The gateway exposes `/v1/messages`, `/v1/messages/count_tokens`, and a Claude-projected `/v1/models`, so no external Anthropic account is needed.
+
+### One-command launcher
 
 ```bash
 python -m pip install -r requirements.txt
 ./scripts/relay-claude
 ```
 
-The launcher starts the gateway if needed, binds it to `127.0.0.1:8000`, sets `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN`, and runs `claude` with the remaining arguments. By default it generates a random bearer token for the session; set `RELAY_AUTH_TOKEN` yourself to reuse one.
+The launcher:
 
-Claude Code sees four tier aliases through `/v1/models`: `claude-fable-5-2`, `claude-opus-5-5`, `claude-sonnet-5-5`, and `claude-haiku-5-5`. Map them to concrete `provider/model` pairs in `settings.json` under `claude.model_map`. Only tool-capable providers are selected for tool-using requests.
+- starts the gateway on `127.0.0.1:8000` if `/health` is not reachable (logs go to `relay-server.log`, override with `RELAY_LOG_FILE`);
+- generates a random session bearer token unless `RELAY_AUTH_TOKEN` is already set;
+- scrubs inherited `ANTHROPIC_*` variables, then sets `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, and `ANTHROPIC_MODEL` (default `claude-sonnet-5-5`);
+- sets Claude Code flags for managed-provider mode, gateway model discovery, a 32k auto-compact window, and disables client watchdogs/timeouts so the gateway owns retries;
+- runs `claude` with any extra arguments you pass (e.g. `./scripts/relay-claude --resume`).
 
-Limitations: thinking/reasoning blocks are translated to plain text, and only providers with native tool calling (Groq, Cerebras, NVIDIA, SambaNova, Ollama, DeepSeek, Cloudflare) can serve tool loops. Verify a chosen model's tool-calling reliability before relying on it for long agent runs.
+If the gateway is **already running**, set `RELAY_AUTH_TOKEN` to the token that server was started with; otherwise the launcher's generated token will not be accepted.
+
+Windows: start the server separately (`python -m src.server`), set `RELAY_AUTH_TOKEN` for both processes, then run `scripts\relay-claude.cmd`.
+
+### Configure Claude Code manually
+
+If you prefer to set the environment yourself:
+
+```bash
+export ANTHROPIC_BASE_URL=http://127.0.0.1:8000
+export ANTHROPIC_AUTH_TOKEN="$RELAY_AUTH_TOKEN"
+export ANTHROPIC_MODEL=claude-sonnet-5-5
+claude
+```
+
+### Model aliases
+
+| Alias | Default backend |
+|-------|-----------------|
+| `claude-fable-5-2` | `groq/qwen/qwen3.8-27b` |
+| `claude-opus-5-5` | `groq/openai/gpt-oss-120b` |
+| `claude-sonnet-5-5` | `groq/qwen/qwen3.6-27b` |
+| `claude-haiku-5-5` | `nvidia/minimaxai/minimax-m3` |
+
+Override the mapping in `settings.json` under `claude.model_map`. Values are `provider/model` pairs; only tool-capable providers are considered when the request includes tools.
+
+### Behaviour & limitations
+
+- The adapter forces `X-Use-ServerSide-System-Prompt: false` internally, so Claude's own system prompt and tool-result history are forwarded verbatim. The separate `/v1/agents/run` Map–Reduce API is untouched.
+- Streaming produces standard Anthropic SSE events; streamed tool arguments are buffered per `tool_use` block before emission.
+- Thinking/reasoning from backend models is emitted as plain text, not signed Anthropic `thinking` blocks.
+- Tool loops work only with providers that have native tool passthrough (Groq, Cerebras, NVIDIA, SambaNova, Ollama, DeepSeek, Cloudflare). Free-tier tool-calling reliability varies by model — test a chosen alias before long agent runs.
+- Token counts are estimates, not provider-reported usage.
 
 ---
 
 ## Roadmap
 
 - [x] Web dashboard for live provider status
+- [x] Image upload routing (vision models)
+- [x] Anthropic Messages API + Claude Code launcher
+- [x] Native tool calling with capability-aware routing
+- [x] Optional bearer auth, loopback bind, localhost-only CORS
+- [x] HTTP error envelopes and streaming usage chunks
 - [ ] Persistent rate limit state (survives restarts)
 - [ ] Prompt caching layer
-- [x] Image upload routing (vision models)
+- [ ] Signed Anthropic thinking blocks
+- [ ] Gemini/Mistral native tool passthrough
 - [ ] Embeddings & image generation routing
 - [ ] One-command Docker deploy
 
