@@ -271,6 +271,17 @@ class ModelDispatcher:
         max_retries = settings.MAX_RETRIES
         attempt = 0
         exclude_providers: list[str] = []
+        if tools_payload:
+            # Never route a tool request to a provider that cannot return
+            # tool calls; let the selector choose only capable backends.
+            for name in list(self.selector.providers):
+                try:
+                    client = self.registry.get_client(name)
+                except Exception:
+                    continue
+                if client is None or not getattr(client, "supports_tools", False):
+                    exclude_providers.append(name)
+
         last_error = ""
         last_error_type = "server_error"
 

@@ -270,6 +270,20 @@ async def list_models_openai(
     available underlying provider models.
     """
     try:
+        if request.headers.get("anthropic-version"):
+            # Claude Code discovers models through this endpoint; project the
+            # configured tier aliases instead of the OpenAI catalog.
+            aliases = [
+                {
+                    "id": alias,
+                    "display_name": alias,
+                    "type": "model",
+                    "created_at": "1970-01-01T00:00:00Z",
+                }
+                for alias in settings.CLAUDE_MODEL_MAP
+            ]
+            return JSONResponse(content={"data": aliases}, status_code=200)
+
         selector = get_selector(request)
         available = selector.get_available_models(model_type=type, model_scale=scale)
 

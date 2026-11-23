@@ -23,6 +23,7 @@ from .model_selector import ModelSelector
 from .provider_registry import ProviderRegistry
 from .usage_tracker import UsageTracker
 from .router import api_router
+from .anthropic_router import anthropic_router
 from .admin import admin_router
 from .agents_router import agents_router
 
@@ -125,6 +126,7 @@ app.add_middleware(
 
 # Register routes
 app.include_router(api_router)
+app.include_router(anthropic_router)
 app.include_router(admin_router)
 app.include_router(agents_router)
 

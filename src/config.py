@@ -59,6 +59,15 @@ class Settings:
         self.DEFAULT_MAX_TOKENS = 4000
         self.META_MODEL_NAME = "meta-model"
 
+        # Claude Code tier aliases -> concrete provider/model pairs.
+        # These defaults point at tool-capable providers that are enabled
+        # out of the box; override them in settings.json or the environment.
+        self.CLAUDE_MODEL_MAP = {
+            "claude-fable-5-2": "groq/qwen/qwen3.8-27b",
+            "claude-opus-5-5": "groq/openai/gpt-oss-120b",
+            "claude-sonnet-5-5": "groq/qwen/qwen3.6-27b",
+            "claude-haiku-5-5": "nvidia/minimaxai/minimax-m3",
+        }
 
         # Selection
         self.PROVIDER_STRATEGY = "roundrobin"
@@ -190,6 +199,7 @@ class Settings:
                 "summarization.max_tokens": "SUMMARIZATION_MAX_TOKENS",
                 "routing.global_provider_lock": "GLOBAL_PROVIDER_LOCK",
                 "routing.use_server_side_system_prompt": "USE_SERVER_SIDE_SYSTEM_PROMPT",
+                "claude.model_map": "CLAUDE_MODEL_MAP",
                 "http.timeout_seconds": "REQUEST_TIMEOUT_SECONDS",
                 "agents.max_parallel_experts": "AGENTS_MAX_PARALLEL",
                 "agents.max_experts_absolute": "AGENTS_MAX_PARALLEL_ABSOLUTE",
