@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Launch Claude Code against a locally running RelayFreeLLM Anthropic endpoint.
+#
+# Usage: ./scripts/relay-claude [claude args...]
+#
+# The gateway is started automatically if /health is not reachable. Set
+# RELAY_AUTH_TOKEN to reuse a fixed token; otherwise a random one is generated
+# for this session.
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+PORT="${PORT:-8000}"
+BASE_URL="http://127.0.0.1:${PORT}"
+
+# Ignore any inherited Anthropic provider/endpoint settings.
+while IFS='=' read -r name _; do
+    case "$name" in
+        ANTHROPIC_*) unset "$name" ;;
+    esac
+done < <(env)
+
+if [ -z "${RELAY_AUTH_TOKEN:-}" ]; then
+    RELAY_AUTH_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+fi
+export RELAY_AUTH_TOKEN
+
+if ! curl -fsS "${BASE_URL}/health" >/dev/null 2>&1; then
+    echo "Starting RelayFreeLLM on ${BASE_URL}..."
+    python -m src.server > "${RELAY_LOG_FILE:-relay-server.log}" 2>&1 &
+    SERVER_PID=$!
+    trap 'kill "${SERVER_PID}" 2>/dev/null || true' EXIT
+
+    ready=0
+    for _ in $(seq 1 100); do
+        if curl -fsS "${BASE_URL}/health" >/dev/null 2>&1; then
+            ready=1
+            break
+        fi
+        sleep 0.2
+    done
+    if [ "$ready" -ne 1 ]; then
+        echo "RelayFreeLLM failed to start; see ${RELAY_LOG_FILE:-relay-server.log}" >&2
+        exit 1
+    fi
+fi
+
+export ANTHROPIC_BASE_URL="${BASE_URL}"
+export ANTHROPIC_AUTH_TOKEN="${RELAY_AUTH_TOKEN}"
+export ANTHROPIC_MODEL="${CLAUDE_MODEL:-claude-sonnet-5-5}"
+
+export CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST=1
+export CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1
+export CLAUDE_CODE_AUTO_MODE_SERVER=0
+export CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1
+export CLAUDE_CODE_AUTO_COMPACT_WINDOW="${CLAUDE_CODE_AUTO_COMPACT_WINDOW:-32000}"
+
+# Keep Claude waiting while the gateway owns retries and failover.
+export CLAUDE_ENABLE_STREAM_WATCHDOG=0
+export CLAUDE_ENABLE_BYTE_WATCHDOG=0
+export API_FORCE_IDLE_TIMEOUT=0
+export API_TIMEOUT_MS=2147483647
+
+exec claude "$@"

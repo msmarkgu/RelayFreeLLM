@@ -460,6 +460,23 @@ Default rate limits in [`provider_model_limits.json`](src/provider_model_limits.
 
 ---
 
+## Using Claude Code
+
+RelayFreeLLM exposes the Anthropic Messages API in addition to OpenAI Chat Completions.
+
+```bash
+python -m pip install -r requirements.txt
+./scripts/relay-claude
+```
+
+The launcher starts the gateway if needed, binds it to `127.0.0.1:8000`, sets `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN`, and runs `claude` with the remaining arguments. By default it generates a random bearer token for the session; set `RELAY_AUTH_TOKEN` yourself to reuse one.
+
+Claude Code sees four tier aliases through `/v1/models`: `claude-fable-5-2`, `claude-opus-5-5`, `claude-sonnet-5-5`, and `claude-haiku-5-5`. Map them to concrete `provider/model` pairs in `settings.json` under `claude.model_map`. Only tool-capable providers are selected for tool-using requests.
+
+Limitations: thinking/reasoning blocks are translated to plain text, and only providers with native tool calling (Groq, Cerebras, NVIDIA, SambaNova, Ollama, DeepSeek, Cloudflare) can serve tool loops. Verify a chosen model's tool-calling reliability before relying on it for long agent runs.
+
+---
+
 ## Roadmap
 
 - [x] Web dashboard for live provider status
