@@ -163,10 +163,12 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
             actual_provider = chat_request.model
             actual_model = chat_request.model
             generated: list[str] = []
+            saw_tool_calls = False
 
             try:
                 async for chunk in dispatch_result:
                     # Handle metadata dict from dispatcher's _stream_with_meta
+                    tool_calls = None
                     if isinstance(chunk, dict):
                         if chunk.get("type") == "meta":
                             actual_provider = chunk["provider"]
@@ -174,8 +176,15 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
                             continue
                         if chunk.get("type") == "content":
                             chunk = chunk["data"]
+                        elif "tool_calls" in chunk:
+                            tool_calls = chunk["tool_calls"]
+                            saw_tool_calls = True
+                            chunk = ""
 
                     generated.append(str(chunk))
+                    delta = {"content": chunk}
+                    if tool_calls is not None:
+                        delta["tool_calls"] = tool_calls
                     data = {
                         "id": chat_id,
                         "object": "chat.completion.chunk",
@@ -185,12 +194,25 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
                         "choices": [
                             {
                                 "index": 0,
-                                "delta": {"content": chunk},
+                                "delta": delta,
                                 "finish_reason": None,
                             }
                         ],
                     }
                     yield f"data: {json.dumps(data)}\n\n"
+
+                if saw_tool_calls:
+                    finish_chunk = {
+                        "id": chat_id,
+                        "object": "chat.completion.chunk",
+                        "created": created,
+                        "model": actual_model,
+                        "provider": actual_provider,
+                        "choices": [
+                            {"index": 0, "delta": {}, "finish_reason": "tool_calls"}
+                        ],
+                    }
+                    yield f"data: {json.dumps(finish_chunk)}\n\n"
 
                 # OpenAI-compatible final chunk carrying estimated usage.
                 selector = get_selector(request)

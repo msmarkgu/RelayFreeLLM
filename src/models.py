@@ -12,6 +12,40 @@ from typing import Any, Literal, Optional, Union
 from pydantic import BaseModel, Field
 
 
+# ── Tool Calling Models ─────────────────────────────────────────────
+
+
+class FunctionCall(BaseModel):
+    """A function name plus JSON-encoded arguments."""
+
+    name: str
+    arguments: str = "{}"
+
+
+class ToolCall(BaseModel):
+    """An assistant request to execute a tool."""
+
+    id: str
+    type: Literal["function"] = "function"
+    function: FunctionCall
+
+
+class FunctionDefinition(BaseModel):
+    name: str
+    description: Optional[str] = None
+    parameters: dict[str, Any] = Field(default_factory=dict)
+
+
+class ToolDefinition(BaseModel):
+    """An OpenAI-style tool definition supplied by the client."""
+
+    type: Literal["function"] = "function"
+    function: FunctionDefinition
+
+
+ToolChoice = Union[str, dict[str, Any]]
+
+
 # ── Request Models ──────────────────────────────────────────────────
 
 
@@ -20,12 +54,15 @@ class ChatMessage(BaseModel):
 
     `content` follows the OpenAI Chat Completions spec: either a plain
     string, or a list of structured content parts (e.g. text + image_url).
-    Use `get_text()` to flatten to a plain string for downstream consumers
-    that don't yet handle structured content.
+    Tool loops additionally use `tool_calls` on assistant messages and
+    `tool_call_id` on tool-result messages. Use `get_text()` to flatten to
+    a plain string for downstream consumers.
     """
 
-    role: Literal["system", "user", "assistant"]
-    content: Union[str, list[Any]]
+    role: Literal["system", "user", "assistant", "tool"]
+    content: Optional[Union[str, list[Any]]] = None
+    tool_call_id: Optional[str] = None
+    tool_calls: Optional[list[ToolCall]] = None
 
     def get_text(self) -> str:
         """Extract plain text from content.
@@ -75,6 +112,8 @@ class ChatCompletionRequest(BaseModel):
     )
     model_scale: Optional[str] = None  # large, medium, small
     model_name: Optional[str] = None  # e.g., deepseek, llama
+    tools: Optional[list[ToolDefinition]] = None
+    tool_choice: Optional[ToolChoice] = None
 
     def get_system_prompt(self) -> str:
         """Extract the system prompt from messages, if any."""
@@ -107,7 +146,8 @@ class ChoiceMessage(BaseModel):
     """The message content within a choice."""
 
     role: str = "assistant"
-    content: str
+    content: Optional[str] = None
+    tool_calls: Optional[list[ToolCall]] = None
 
 
 class Choice(BaseModel):
@@ -220,22 +260,22 @@ class AgentRunResponse(BaseModel):
 
 
 def build_response(
-    content: str,
+    content: str | None,
     provider: str,
     model: str,
     latency_ms: float,
     attempt: int,
     prompt_tokens: int = 0,
     completion_tokens: int = 0,
+    tool_calls: Optional[list[ToolCall]] = None,
 ) -> ChatCompletionResponse:
     """Build a ChatCompletionResponse from raw values."""
-    if content is None:
-        content = ""
     return ChatCompletionResponse(
         model=model,
         choices=[
             Choice(
-                message=ChoiceMessage(content=content),
+                message=ChoiceMessage(content=content, tool_calls=tool_calls),
+                finish_reason="tool_calls" if tool_calls else "stop",
             )
         ],
         usage=Usage(

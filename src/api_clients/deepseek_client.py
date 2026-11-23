@@ -6,11 +6,13 @@ from ..config import settings
 from ..exceptions import ProviderError, RateLimitError, AuthenticationError
 from ..logging_util import ProjectLogger
 from .api_interface import ApiInterface
+from .tool_support import ToolResponse, serialize_tools, tool_calls_from_message
 
 
 class DeepSeekClient(ApiInterface):
 
     PROVIDER_NAME = "DeepSeek"
+    supports_tools = True
 
     def __init__(self):
         self.api_key = settings.get_api_key("DEEPSEEK_APIKEY")
@@ -46,7 +48,13 @@ class DeepSeekClient(ApiInterface):
                              messages: list[dict],
                              model="deepseek-chat", 
                              temperature=0.7, 
-                             max_tokens=4000) -> str:
+                             max_tokens=4000,
+                             stream: bool = False,
+                             tools: list[dict] | None = None,
+                             tool_choice: str | dict | None = None) -> str:
+        if stream:
+            raise ProviderError("DeepSeek", "Streaming is not supported by this client.")
+
         await asyncio.sleep(0.5)
 
         headers = {
@@ -54,6 +62,7 @@ class DeepSeekClient(ApiInterface):
             "Content-Type": "application/json"
         }
 
+        tool_payload = serialize_tools(tools)
         payload = {
             "model": model,
             "messages": messages,
@@ -61,6 +70,10 @@ class DeepSeekClient(ApiInterface):
             "max_tokens": max_tokens,
             "stream": False
         }
+        if tool_payload:
+            payload["tools"] = tool_payload
+            if tool_choice is not None:
+                payload["tool_choice"] = tool_choice
 
         try:
             async with httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT_SECONDS) as client:
@@ -72,7 +85,13 @@ class DeepSeekClient(ApiInterface):
                 
                 if response.status_code == 200:
                     data = response.json()
-                    return data["choices"][0]["message"]["content"]
+                    message = data["choices"][0]["message"]
+                    if tool_payload:
+                        return ToolResponse(
+                            content=message.get("content") or "",
+                            tool_calls=tool_calls_from_message(message),
+                        )
+                    return message["content"]
                 elif response.status_code == 429:
                     raise RateLimitError("DeepSeek", f"Rate limited: {response.text}")
                 elif response.status_code in (401, 403):

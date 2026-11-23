@@ -5,11 +5,18 @@ from ..config import settings
 from ..exceptions import ProviderError, RateLimitError, AuthenticationError
 from ..logging_util import ProjectLogger
 from .api_interface import ApiInterface
+from .tool_support import (
+    ToolResponse,
+    serialize_tools,
+    tool_call_deltas,
+    tool_calls_from_message,
+)
 
 
 class NvidiaClient(ApiInterface):
 
     PROVIDER_NAME = "Nvidia"
+    supports_tools = True
 
     def __init__(self):
         self.api_key = settings.get_api_key("NVIDIA_APIKEY")
@@ -48,6 +55,8 @@ class NvidiaClient(ApiInterface):
         temperature: float = 0.7,
         max_tokens: int = 4000,
         stream: bool = False,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> str | object:
 
         headers = {
@@ -55,6 +64,7 @@ class NvidiaClient(ApiInterface):
             "Content-Type": "application/json"
         }
 
+        tool_payload = serialize_tools(tools)
         payload = {
             "model": model,
             "messages": messages,
@@ -62,10 +72,14 @@ class NvidiaClient(ApiInterface):
             "max_tokens": max_tokens,
             "stream": stream
         }
+        if tool_payload:
+            payload["tools"] = tool_payload
+            if tool_choice is not None:
+                payload["tool_choice"] = tool_choice
 
         try:
             if stream:
-                return self._stream_response(payload, headers)
+                return self._stream_response(payload, headers, bool(tool_payload))
 
             async with httpx.AsyncClient(timeout=settings.HTTP_TIMEOUT) as client:
                 response = await client.post(
@@ -76,9 +90,15 @@ class NvidiaClient(ApiInterface):
 
                 if response.status_code == 200:
                     data = response.json()
-                    content = data["choices"][0]["message"].get("content")
+                    message = data["choices"][0]["message"]
+                    content = message.get("content")
                     if content is None:
-                        content = data["choices"][0]["message"].get("reasoning", "")
+                        content = message.get("reasoning", "")
+                    if tool_payload:
+                        return ToolResponse(
+                            content=content or "",
+                            tool_calls=tool_calls_from_message(message),
+                        )
                     return content
                 elif response.status_code == 429:
                     raise RateLimitError("Nvidia", f"Rate limited: {response.text}")
@@ -92,7 +112,9 @@ class NvidiaClient(ApiInterface):
         except Exception as e:
             raise ProviderError("Nvidia", str(e)) from e
 
-    async def _stream_response(self, payload: dict, headers: dict):
+    async def _stream_response(
+        self, payload: dict, headers: dict, with_tools: bool = False
+    ):
         client = httpx.AsyncClient(timeout=settings.HTTP_STREAM_TIMEOUT)
         try:
             async with client.stream(
@@ -123,6 +145,8 @@ class NvidiaClient(ApiInterface):
                             content = delta.get("reasoning", "")
                         if content:
                             yield content
+                        if with_tools and delta.get("tool_calls"):
+                            yield {"tool_calls": tool_call_deltas(delta)}
                     except (json.JSONDecodeError, KeyError, IndexError):
                         continue
         finally:

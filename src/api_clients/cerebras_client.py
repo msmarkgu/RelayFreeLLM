@@ -7,11 +7,18 @@ from ..config import settings
 from ..exceptions import ProviderError, RateLimitError, AuthenticationError
 from ..logging_util import ProjectLogger
 from .api_interface import ApiInterface
+from .tool_support import (
+    ToolResponse,
+    serialize_tools,
+    tool_call_deltas,
+    tool_calls_from_message,
+)
 
 
 class CerebrasClient(ApiInterface):
 
     PROVIDER_NAME = "Cerebras"
+    supports_tools = True
 
     def __init__(self):
         api_key = settings.get_api_key("CEREBRAS_APIKEY")
@@ -33,9 +40,18 @@ class CerebrasClient(ApiInterface):
         temperature: float = 0.8,
         max_tokens: int = 4000,
         stream: bool = False,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> str | object:
 
         try:
+            tool_payload = serialize_tools(tools)
+            extra = {}
+            if tool_payload:
+                extra["tools"] = tool_payload
+                if tool_choice is not None:
+                    extra["tool_choice"] = tool_choice
+
             if stream:
 
                 async def generate():
@@ -45,10 +61,17 @@ class CerebrasClient(ApiInterface):
                         temperature=temperature,
                         max_completion_tokens=max_tokens,
                         stream=True,
+                        **extra,
                     )
                     for chunk in stream_resp:
-                        if chunk.choices and chunk.choices[0].delta.content:
-                            yield chunk.choices[0].delta.content
+                        if not chunk.choices:
+                            continue
+                        delta = chunk.choices[0].delta
+                        if delta.content:
+                            yield delta.content
+                        deltas = tool_call_deltas(delta)
+                        if deltas:
+                            yield {"tool_calls": deltas}
 
                 return generate()
 
@@ -60,6 +83,7 @@ class CerebrasClient(ApiInterface):
                 top_p=1,
                 stop=None,
                 stream=False,
+                **extra,
             )
 
             if (
@@ -67,8 +91,13 @@ class CerebrasClient(ApiInterface):
                 and chat_completion.choices
                 and len(chat_completion.choices) > 0
             ):
-                content = chat_completion.choices[0].message.content
-                return content if content is not None else ""
+                message = chat_completion.choices[0].message
+                if tool_payload:
+                    return ToolResponse(
+                        content=message.content or "",
+                        tool_calls=tool_calls_from_message(message),
+                    )
+                return message.content if message.content is not None else ""
             else:
                 raise ProviderError("Cerebras", "No response from the model.")
 

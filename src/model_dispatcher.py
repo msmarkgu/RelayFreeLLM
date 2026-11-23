@@ -17,9 +17,11 @@ from .exceptions import (
     AuthenticationError,
     AllProvidersExhaustedError,
 )
+from .api_clients.tool_support import ToolResponse, serialize_tools
 from .models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
+    ToolCall,
     build_response,
     build_error_response,
     ChatMessage
@@ -33,6 +35,18 @@ from .context_manager import ContextManager
 from .config import settings
 from typing import List, Optional, Union
 import asyncio
+
+
+def _message_to_dict(msg: ChatMessage) -> dict:
+    """Serialize a ChatMessage, retaining tool-call fields for provider APIs."""
+    data = {"role": msg.role, "content": msg.content}
+    if msg.tool_call_id:
+        data["tool_call_id"] = msg.tool_call_id
+    if msg.tool_calls:
+        data["tool_calls"] = [
+            call.model_dump(exclude_none=True) for call in msg.tool_calls
+        ]
+    return data
 
 
 def _request_contains_images(request: ChatCompletionRequest) -> bool:
@@ -103,6 +117,8 @@ class ModelDispatcher:
         sys_prompt = request.get_system_prompt()
         temperature = request.temperature
         max_tokens = request.max_tokens
+        tools_payload = serialize_tools(request.tools)
+        tool_choice = request.tool_choice
         response_format = request.response_format
         stream = request.stream
 
@@ -209,14 +225,22 @@ class ModelDispatcher:
                     conversation_history=conversation_history,
                     session_id=session_id,
                     client_messages=client_messages,
+                    tools=tools_payload,
+                    tool_choice=tool_choice,
                 )
                 latency_ms = (time.time() - start_time) * 1000
+
+                tool_calls = None
+                content = model_resp
+                if isinstance(model_resp, ToolResponse):
+                    content = model_resp.content
+                    tool_calls = [ToolCall(**call) for call in model_resp.tool_calls]
 
                 if stream:
                     return self._stream_with_meta(model_resp, provider_name, model_name)
 
                 prompt_tokens = self.selector.estimate_tokens(user_prompt)
-                completion_tokens = self.selector.estimate_tokens(model_resp)
+                completion_tokens = self.selector.estimate_tokens(content)
                 if self.usage_tracker:
                     self.usage_tracker.record_usage(
                         provider_name,
@@ -226,13 +250,14 @@ class ModelDispatcher:
                     )
 
                 return build_response(
-                    content=model_resp,
+                    content=content,
                     provider=provider_name,
                     model=model_name,
                     latency_ms=latency_ms,
                     attempt=1,
                     prompt_tokens=prompt_tokens,
                     completion_tokens=completion_tokens,
+                    tool_calls=tool_calls,
                 )
             except Exception as e:
                 self.logger.error(f"Specific routing to {request.model} failed: {e}\n{traceback.format_exc()}")
@@ -323,8 +348,16 @@ class ModelDispatcher:
                     conversation_history=conversation_history,
                     session_id=session_id,
                     client_messages=client_messages,
+                    tools=tools_payload,
+                    tool_choice=tool_choice,
                 )
                 latency_ms = (time.time() - start_time) * 1000
+
+                tool_calls = None
+                content = model_resp
+                if isinstance(model_resp, ToolResponse):
+                    content = model_resp.content
+                    tool_calls = [ToolCall(**call) for call in model_resp.tool_calls]
 
                 if stream:
                     # Update Session Affinity on successful stream start
@@ -338,7 +371,7 @@ class ModelDispatcher:
                     return self._stream_with_meta(model_resp, provider_name, model_name)
 
                 prompt_tokens = self.selector.estimate_tokens(user_prompt)
-                completion_tokens = self.selector.estimate_tokens(model_resp)
+                completion_tokens = self.selector.estimate_tokens(content)
                 if self.usage_tracker:
                     self.usage_tracker.record_usage(
                         provider_name,
@@ -357,13 +390,14 @@ class ModelDispatcher:
                         }
 
                 return build_response(
-                    content=model_resp,
+                    content=content,
                     provider=provider_name,
                     model=model_name,
                     latency_ms=latency_ms,
                     attempt=attempt + 1,
                     prompt_tokens=prompt_tokens,
                     completion_tokens=completion_tokens,
+                    tool_calls=tool_calls,
                 )
 
             except AuthenticationError as e:
@@ -438,6 +472,8 @@ class ModelDispatcher:
         conversation_history: Optional[List[ChatMessage]] = None,
         session_id: str = "default",
         client_messages: Optional[List[ChatMessage]] = None,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> str | object:
         """
         Call a specific provider's model API.
@@ -468,6 +504,12 @@ class ModelDispatcher:
 
         api_client = self.registry.get_client(provider_name)
 
+        if tools and not getattr(api_client, "supports_tools", False):
+            raise ProviderError(
+                provider_name,
+                f"Provider '{provider_name}' does not support tool calling.",
+            )
+
         response_format_dict = None
         if response_format:
             response_format_dict = {"type": getattr(response_format, "type", None)}
@@ -486,17 +528,22 @@ class ModelDispatcher:
             target_context_tokens = self._calculate_target_context_tokens(
                 provider_name, model_name, max_tokens
             )
-            selected_history = self.context_manager.select_context_for_request(
-                client_messages,
-                session_id=session_id,
-                target_context_tokens=target_context_tokens,
-            )
+            if tools:
+                # Tool loops must keep tool_use/tool_result pairs adjacent and
+                # in order; reservoir summarisation would corrupt them.
+                selected_history = client_messages
+            else:
+                selected_history = self.context_manager.select_context_for_request(
+                    client_messages,
+                    session_id=session_id,
+                    target_context_tokens=target_context_tokens,
+                )
             # Preserve original content (string or list w/ image_url parts)
             # for multimodal support; use get_text() only for the empty check.
             messages = [
-                {"role": msg.role, "content": msg.content}
+                _message_to_dict(msg)
                 for msg in selected_history
-                if msg.get_text().strip()
+                if msg.get_text().strip() or msg.tool_calls
             ]
             self.logger.debug(
                 f"Verbatim path: forwarded {len(messages)} "
@@ -522,9 +569,9 @@ class ModelDispatcher:
                 # Preserve original content for multimodal support; use
                 # get_text() only for the empty check.
                 context_messages = [
-                    {"role": msg.role, "content": msg.content}
+                    _message_to_dict(msg)
                     for msg in selected_history
-                    if msg.get_text().strip()
+                    if msg.get_text().strip() or msg.tool_calls
                 ]
 
                 self.logger.debug(
@@ -571,6 +618,8 @@ class ModelDispatcher:
                     temperature=temperature or settings.DEFAULT_TEMPERATURE,
                     max_tokens=max_tokens or settings.DEFAULT_MAX_TOKENS,
                     stream=stream,
+                    tools=tools,
+                    tool_choice=tool_choice,
                 )
         else:
             model_resp = await api_client.call_model_api(
@@ -579,6 +628,8 @@ class ModelDispatcher:
                 temperature=temperature or settings.DEFAULT_TEMPERATURE,
                 max_tokens=max_tokens or settings.DEFAULT_MAX_TOKENS,
                 stream=stream,
+                tools=tools,
+                tool_choice=tool_choice,
             )
 
         # Update usage tracking for context (for dynamic mode)
@@ -598,7 +649,12 @@ class ModelDispatcher:
             self.context_manager.update_usage(session_id, context_tokens)
 
         if not stream:
-            normalized_resp = self.normalizer.normalize(model_resp, response_format_dict)
+            if isinstance(model_resp, ToolResponse):
+                normalized_resp = model_resp
+            else:
+                normalized_resp = self.normalizer.normalize(
+                    model_resp, response_format_dict
+                )
             self.logger.debug(f"Model response:\n{normalized_resp}")
             return normalized_resp
         return model_resp

@@ -15,6 +15,9 @@ class ApiInterface(ABC):
 
     PROVIDER_NAME: str = ""
     supports_multimodal: bool = False
+    # Set to True by clients that can forward tool definitions and surface
+    # tool calls in their responses.
+    supports_tools: bool = False
 
     @abstractmethod
     async def call_model_api(
@@ -24,6 +27,8 @@ class ApiInterface(ABC):
         temperature: float,
         max_tokens: int,
         stream: bool = False,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> str | object:
         pass
 
