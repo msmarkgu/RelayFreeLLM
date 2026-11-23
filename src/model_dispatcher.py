@@ -193,6 +193,7 @@ class ModelDispatcher:
                                     error_message="Request contains images but no "
                                     "vision-capable models are available.",
                                     attempt=1,
+                                    error_type="invalid_request_error",
                                 )
 
                 start_time = time.time()
@@ -214,12 +215,14 @@ class ModelDispatcher:
                 if stream:
                     return self._stream_with_meta(model_resp, provider_name, model_name)
 
+                prompt_tokens = self.selector.estimate_tokens(user_prompt)
+                completion_tokens = self.selector.estimate_tokens(model_resp)
                 if self.usage_tracker:
                     self.usage_tracker.record_usage(
                         provider_name,
                         model_name,
-                        self.selector.estimate_tokens(user_prompt),
-                        self.selector.estimate_tokens(model_resp),
+                        prompt_tokens,
+                        completion_tokens,
                     )
 
                 return build_response(
@@ -228,12 +231,15 @@ class ModelDispatcher:
                     model=model_name,
                     latency_ms=latency_ms,
                     attempt=1,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
                 )
             except Exception as e:
                 self.logger.error(f"Specific routing to {request.model} failed: {e}\n{traceback.format_exc()}")
                 return build_error_response(
                     error_message=f"Specific routing to {request.model} failed: {str(e)}",
                     attempt=1,
+                    error_type="upstream_error",
                 )
 
         # Case 2: Meta Model Routing (Default) - with optional type/scale filter
@@ -241,6 +247,7 @@ class ModelDispatcher:
         attempt = 0
         exclude_providers: list[str] = []
         last_error = ""
+        last_error_type = "server_error"
 
         # Determine affinity
         preferred_provider = None
@@ -291,6 +298,7 @@ class ModelDispatcher:
                         return build_error_response(
                             error_message=f"All models are at capacity. Wait time {wait_time:.1f}s exceeds limit.",
                             attempt=attempt + 1,
+                            error_type="rate_limit_error",
                         )
 
                     self.logger.info(
@@ -329,12 +337,14 @@ class ModelDispatcher:
                             }
                     return self._stream_with_meta(model_resp, provider_name, model_name)
 
+                prompt_tokens = self.selector.estimate_tokens(user_prompt)
+                completion_tokens = self.selector.estimate_tokens(model_resp)
                 if self.usage_tracker:
                     self.usage_tracker.record_usage(
                         provider_name,
                         model_name,
-                        self.selector.estimate_tokens(user_prompt),
-                        self.selector.estimate_tokens(model_resp),
+                        prompt_tokens,
+                        completion_tokens,
                     )
 
                 # Update Session Affinity on success
@@ -352,18 +362,26 @@ class ModelDispatcher:
                     model=model_name,
                     latency_ms=latency_ms,
                     attempt=attempt + 1,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
                 )
 
             except AuthenticationError as e:
                 self.logger.error(f"Auth failure for {e.provider}: {e}")
                 attempt += 1
                 last_error = str(e)
+                last_error_type = "authentication_error"
                 if "provider_name" in locals():
                     exclude_providers.append(provider_name)
 
             except (ProviderError, RateLimitError) as e:
                 attempt += 1
                 last_error = str(e)
+                last_error_type = (
+                    "rate_limit_error"
+                    if isinstance(e, RateLimitError)
+                    else "upstream_error"
+                )
                 self.logger.warning(f"Attempt {attempt} failed: {last_error}")
 
                 if "provider_name" in locals() and "model_name" in locals():
@@ -376,6 +394,7 @@ class ModelDispatcher:
             except Exception as e:
                 attempt += 1
                 last_error = str(e)
+                last_error_type = "server_error"
                 self.logger.warning(f"Attempt {attempt} unexpected error: {last_error}")
                 if "provider_name" in locals():
                     exclude_providers.append(provider_name)
@@ -387,11 +406,13 @@ class ModelDispatcher:
                 return build_error_response(
                     error_message=f"All retries failed. Last error: {last_error}",
                     attempt=attempt,
+                    error_type=last_error_type,
                 )
 
         return build_error_response(
             error_message="Unexpected retry loop exit",
             attempt=attempt,
+            error_type=last_error_type,
         )
 
     # ── Streaming metadata wrapper ───────────────────────────────

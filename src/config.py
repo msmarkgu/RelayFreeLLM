@@ -39,9 +39,15 @@ class Settings:
         self.OLLAMA_BASE_URL = "http://localhost:11434"
 
         # Server
-        self.HOST = "0.0.0.0"
+        # Bind to loopback by default: RelayFreeLLM is a local gateway unless
+        # explicitly exposed (e.g. HOST=0.0.0.0 inside a container).
+        self.HOST = "127.0.0.1"
         self.PORT = 8000
         self.LOG_LEVEL = "INFO"
+        # Optional bearer token. When set, every API/admin request must send
+        # `Authorization: Bearer <token>`; health endpoints stay public so
+        # local launchers can poll readiness.
+        self.AUTH_TOKEN = ""
         self.SESSION_ID_HEADER = "X-Session-ID"
         self.USE_SERVER_SIDE_SYSTEM_PROMPT_HEADER = "X-Use-ServerSide-System-Prompt"
         self.SESSION_AFFINITY_ENABLED = True
@@ -52,6 +58,7 @@ class Settings:
         self.DEFAULT_TEMPERATURE = 0.8
         self.DEFAULT_MAX_TOKENS = 4000
         self.META_MODEL_NAME = "meta-model"
+
 
         # Selection
         self.PROVIDER_STRATEGY = "roundrobin"
@@ -225,6 +232,7 @@ class Settings:
         # Server
         self.HOST = os.getenv("HOST", self.HOST)
         self.PORT = int(os.getenv("PORT", str(self.PORT)))
+        self.AUTH_TOKEN = os.getenv("RELAY_AUTH_TOKEN", self.AUTH_TOKEN)
         self.SESSION_AFFINITY_ENABLED = os.getenv("SESSION_AFFINITY_ENABLED", str(self.SESSION_AFFINITY_ENABLED)).lower() == "true"
         self.SESSION_TTL_HOURS = int(os.getenv("SESSION_TTL_HOURS", str(self.SESSION_TTL_HOURS)))
 

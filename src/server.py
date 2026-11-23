@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
+from .auth import BearerAuthMiddleware
 from .config import settings
 from .conversation_store import ConversationStore
 from .logging_util import ProjectLogger
@@ -108,9 +109,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Optional token gate. Added before CORS so CORS remains outermost and can
+# answer browser preflight requests itself (the middleware also skips OPTIONS).
+app.add_middleware(BearerAuthMiddleware, token=settings.AUTH_TOKEN)
+
+# Browser clients are limited to loopback origins; wildcards would let any
+# web page drive a locally running gateway.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

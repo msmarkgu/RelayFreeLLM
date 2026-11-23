@@ -126,6 +126,13 @@ class Usage(BaseModel):
     total_tokens: int = 0
 
 
+class ErrorDetail(BaseModel):
+    """OpenAI-style error payload carried on failed gateway responses."""
+
+    message: str
+    type: str = "server_error"
+
+
 class ChatCompletionResponse(BaseModel):
     """
     OpenAI-compatible chat completion response.
@@ -140,6 +147,7 @@ class ChatCompletionResponse(BaseModel):
     choices: list[Choice]
     usage: Optional[Usage] = None
     meta: MetaInfo  # extension: provider attribution
+    error: Optional[ErrorDetail] = None
 
 
 # ── Agent / Map-Reduce Request/Response ────────────────────────────────
@@ -247,8 +255,13 @@ def build_response(
 def build_error_response(
     error_message: str,
     attempt: int,
+    error_type: str = "server_error",
 ) -> ChatCompletionResponse:
-    """Build an error response in the same OpenAI-compatible shape."""
+    """Build an error response carrying an OpenAI-style error payload.
+
+    ``choices``/``finish_reason`` are kept for backwards compatibility with
+    existing callers; the router converts ``error`` into an HTTP error status.
+    """
     return ChatCompletionResponse(
         model="none",
         choices=[
@@ -257,6 +270,7 @@ def build_error_response(
                 finish_reason="error",
             )
         ],
+        error=ErrorDetail(message=error_message, type=error_type),
         meta=MetaInfo(
             provider="none",
             model="none",
