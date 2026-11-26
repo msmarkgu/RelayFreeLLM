@@ -65,7 +65,7 @@
       "claude-fable-5-2": "groq/qwen/qwen3.8-27b",
       "claude-opus-5-5": "groq/openai/gpt-oss-120b",
       "claude-sonnet-5-5": "groq/qwen/qwen3.6-27b",
-      "claude-haiku-5-5": "nvidia/minimaxai/minimax-m3"
+      "claude-haiku-5-5": "nvidia/minimaxai/minimax-m3.1-flash"
     }
   },
 

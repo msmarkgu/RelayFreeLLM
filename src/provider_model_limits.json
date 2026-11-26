@@ -248,7 +248,7 @@
       "enabled": true,
       "models": [
         {
-          "name": "minimaxai/minimax-m3",
+          "name": "minimaxai/minimax-m3.1-flash",
           "type": "text",
           "scale": "large",
           "limits": {
@@ -260,10 +260,11 @@
             "tokens_per_hour": -1,
             "tokens_per_day": -1
           },
-          "Max_Context_Length": 8000
+          "Max_Context_Length": 262144,
+          "modality": "vision"
         },
         {
-          "name": "moonshotai/kimi-k3",
+          "name": "moonshotai/kimi-k3.1-pro",
           "type": "text",
           "scale": "large",
           "limits": {
@@ -275,7 +276,8 @@
             "tokens_per_hour": -1,
             "tokens_per_day": -1
           },
-          "Max_Context_Length": 16000
+          "Max_Context_Length": 1048576,
+          "modality": "vision"
         }
       ]
     },
