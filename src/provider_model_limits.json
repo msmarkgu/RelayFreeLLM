@@ -187,38 +187,6 @@
           "Max_Context_Length": 262000
         },
         {
-          "name": "mistral-medium-2508",
-          "type": "text",
-          "scale": "medium",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 50,
-            "requests_per_hour": 3000,
-            "requests_per_day": 60000,
-            "tokens_per_minute": 50000,
-            "tokens_per_hour": 3000000,
-            "tokens_per_day": 30000000
-          },
-          "Max_Context_Length": 32000,
-          "modality": "vision"
-        },
-        {
-          "name": "mistral-medium-2505",
-          "type": "text",
-          "scale": "medium",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 50,
-            "requests_per_hour": 3000,
-            "requests_per_day": 60000,
-            "tokens_per_minute": 50000,
-            "tokens_per_hour": 3000000,
-            "tokens_per_day": 300
-          },
-          "Max_Context_Length": 32000,
-          "modality": "vision"
-        },
-        {
           "name": "mistral-medium",
           "type": "text",
           "scale": "medium",
