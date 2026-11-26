@@ -217,12 +217,6 @@ By default, conversations are saved to your browser's `localStorage`. Switch to 
 
 ---
 
-## See It In Action
-
-![RelayFreeLLM Demo](https://raw.githubusercontent.com/msmarkgu/RelayFreeLLM/main/relayfreellm-demo.gif)
-
----
-
 ## How Routing Works
 
 ### Intent-Based Selection
