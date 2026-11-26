@@ -172,6 +172,8 @@ response = client.chat.completions.create(
 )
 ```
 
+For Claude Code in the terminal or VS Code, see [Using Claude Code](#using-claude-code).
+
 ---
 
 ## Admin Dashboard
@@ -550,7 +552,7 @@ Default rate limits in [`provider_model_limits.json`](src/provider_model_limits.
 
 ## Using Claude Code
 
-RelayFreeLLM can act as a local Anthropic backend for Claude Code. The gateway exposes `/v1/messages`, `/v1/messages/count_tokens`, and a Claude-projected `/v1/models`, so no external Anthropic account is needed.
+RelayFreeLLM can act as a local Anthropic backend for Claude Code, both in the terminal and in the VS Code extension. The gateway exposes `/v1/messages`, `/v1/messages/count_tokens`, and a Claude-projected `/v1/models`, so no external Anthropic account is needed.
 
 ### One-command launcher
 
@@ -582,6 +584,32 @@ export ANTHROPIC_MODEL=claude-sonnet-5-5
 claude
 ```
 
+### VS Code extension
+
+The official **Claude Code** extension can use the gateway directly. Install it from the VS Code Marketplace, start the gateway with `RELAY_AUTH_TOKEN` set, then open **Preferences: Open User Settings (JSON)** and add:
+
+```json
+{
+  "claudeCode.disableLoginPrompt": true,
+  "claudeCode.environmentVariables": [
+    { "name": "ANTHROPIC_BASE_URL", "value": "http://127.0.0.1:8000" },
+    { "name": "ANTHROPIC_AUTH_TOKEN", "value": "<RELAY_AUTH_TOKEN>" },
+    { "name": "ANTHROPIC_MODEL", "value": "claude-sonnet-5-5" },
+    { "name": "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY", "value": "1" },
+    { "name": "CLAUDE_CODE_DISABLE_ADVISOR_TOOL", "value": "1" },
+    { "name": "CLAUDE_ENABLE_STREAM_WATCHDOG", "value": "0" },
+    { "name": "CLAUDE_ENABLE_BYTE_WATCHDOG", "value": "0" }
+  ]
+}
+```
+
+Reload the window, open the Claude Code panel, and run `/status`: `Anthropic base URL` should show `http://127.0.0.1:8000` and the credential should be `ANTHROPIC_AUTH_TOKEN`. With discovery enabled, switch aliases from `/model`.
+
+- Put these in **user settings**, not a committed workspace settings file. The extension checks credentials from `claudeCode.environmentVariables` before launching; `~/.claude/settings.json` reaches the spawned process but not that login check.
+- Use the same token the gateway was started with. If the gateway generated a session token via `scripts/relay-claude`, that token is not valid for a gateway started separately.
+- Third-party-provider mode has no plan usage bars, voice dictation, or cloud sessions/Remote Control.
+- If you prefer the CLI inside VS Code's integrated terminal, use `scripts/relay-claude` instead; the launcher sets the same variables for that shell.
+
 ### Model aliases
 
 | Alias | Default backend |
@@ -607,7 +635,7 @@ Override the mapping in `settings.json` under `claude.model_map`. Values are `pr
 
 - [x] Web dashboard for live provider status
 - [x] Image upload routing (vision models)
-- [x] Anthropic Messages API + Claude Code launcher
+- [x] Anthropic Messages API + Claude Code CLI and VS Code extension
 - [x] Native tool calling with capability-aware routing
 - [x] Optional bearer auth, loopback bind, localhost-only CORS
 - [x] HTTP error envelopes and streaming usage chunks
