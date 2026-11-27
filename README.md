@@ -9,7 +9,7 @@ Don't want to pay for AI APIs? RelayFreeLLM is an open-source gateway that combi
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="fake")
 ```
 
-**Enabled by default:** Groq · Gemini · NVIDIA — their free tiers require no credit card.<br>
+**Enabled by default:** Groq · Gemini · NVIDIA · [Requesty](https://requesty.ai/) · [Kilo Gateway](https://kilo.ai/docs/gateway) — their free tiers require no credit card.<br>
 **Optional hosted clients:** Mistral · Cerebras · DeepSeek · Cloudflare · SambaNova — signup may require a credit card or payment setup.
 
 Rather than cataloguing hundreds of free providers available on the web, RelayFreeLLM ships a curated set chosen for relatively generous free-tier quotas and reputable models.
@@ -37,9 +37,16 @@ Create a `.env` file in the project root with the keys for the providers enabled
 GEMINI_APIKEY=      # ai.google.dev
 GROQ_APIKEY=        # console.groq.com
 NVIDIA_APIKEY=      # build.nvidia.com
+REQUESTY_APIKEY=    # requesty.ai
 ```
 
-The other provider clients ship in `src/api_clients/` but have no models enabled by default. To use one, add its credentials (see [`.env.example`](.env.example)) and add models under that provider in [`provider_model_limits.json`](src/provider_model_limits.json) or through the Admin Dashboard. Ollama needs no key — just a running local server (`OLLAMA_BASE_URL`).
+The other provider clients ship in `src/api_clients/` but have no models enabled by default. To use one, add its credentials (see [`.env.example`](.env.example)) and enable its models under that provider in [`provider_model_limits.json`](src/provider_model_limits.json) or through the Admin Dashboard. Ollama needs no key — just a running local server (`OLLAMA_BASE_URL`).
+
+**Requesty example:** Requesty is enabled by default and needs only `REQUESTY_APIKEY=<your key>` in `.env`; no credit card is required. Its free models have a daily request allowance. Requesty model ids can contain a `/` (e.g. `nvidia/nemotron-3-ultra-550b-a55b`); in specific-routing requests prefix the provider once: `requesty/nvidia/nemotron-3-ultra-550b-a55b`. Requesty routes bare model names across its own providers, so its free-tier limits are per organization, not per upstream provider.
+
+**Kilo Gateway example:** Kilo Gateway needs no API key and no credit card. Anonymous access is limited to 200 requests/hour/IP and only to free models. In specific-routing requests prefix the provider once: `kilogateway/nvidia/nemotron-3.5-lightning:free`. Paid Kilo models are not exposed by this client.
+
+The curated Kilo free set is chosen for coding-agent use: `kilo-auto/free` (Kilo's curated free router), `nvidia/nemotron-3-ultra-550b-a55b:free`, `nvidia/nemotron-3.5-super-vl:free`, `baidu/ernie-5.5-flash-preview:free`, and `nvidia/nemotron-3.5-lightning:free`. All five support tool calling and streaming. `kilo-auto/free` rotates underlying models, which may log prompts and outputs — avoid sending confidential code with it.
 
 ### 3. Start the server
 
@@ -185,19 +192,19 @@ Reload the window, open the Claude Code panel, and run `/status`: `Anthropic bas
 
 | Alias | Default backend |
 |-------|-----------------|
-| `claude-fable-5-2` | `nvidia/minimaxai/minimax-m3.1-flash` |
-| `claude-opus-5-5` | `nvidia/nemotron-3-ultra-550b-a55b` |
-| `claude-sonnet-5-5` | `nvidia/nemotron-3.5-super-vl-120b-a12b` |
-| `claude-haiku-5-5` | `nvidia/nemotron-3.5-lightning-30b-a3b` |
+| `claude-fable-5-2` | `kilogateway/baidu/ernie-5.5-flash-preview:free` |
+| `claude-opus-5-5` | `kilogateway/nvidia/nemotron-3-ultra-550b-a55b:free` |
+| `claude-sonnet-5-5` | `kilogateway/nvidia/nemotron-3.5-super-vl:free` |
+| `claude-haiku-5-5` | `kilogateway/nvidia/nemotron-3.5-lightning:free` |
 
-Override the mapping in `settings.json` under `claude.model_map`. Values are `provider/model` pairs; only tool-capable providers are considered when the request includes tools. Claude Code sends large system prompts and tool schemas, so prefer backends without a tight per-minute input-token cap (NVIDIA) over Groq's free tier for these aliases.
+Override the mapping in `settings.json` under `claude.model_map`. Values are `provider/model` pairs; only tool-capable providers are considered when the request includes tools. These defaults use Kilo Gateway's keyless free endpoints because its NVIDIA-hosted models are typically faster than the direct NVIDIA equivalents. Claude Code sends large system prompts and tool schemas, so prefer backends without a tight per-minute input-token cap.
 
 ### Behaviour & limitations
 
 - The adapter forces `X-Use-ServerSide-System-Prompt: false` internally, so Claude's own system prompt and tool-result history are forwarded verbatim. The separate [`/v1/agents/run`](#post-v1agentsrun) Map–Reduce API is unaffected.
 - Streaming produces standard Anthropic SSE events; streamed tool arguments are buffered per `tool_use` block before emission.
 - Thinking/reasoning from backend models is emitted as plain text, not signed Anthropic `thinking` blocks.
-- Tool loops work only with providers that have native tool passthrough: **Groq and NVIDIA** are enabled by default; Cerebras, DeepSeek, Cloudflare, Ollama, and SambaNova can be enabled as additional providers. Free-tier tool-calling reliability varies by model — test a chosen alias before long agent runs.
+- Tool loops work only with providers that have native tool passthrough: **Groq, NVIDIA, Requesty, and Kilo Gateway** are enabled by default; Cerebras, DeepSeek, Cloudflare, Ollama, and SambaNova can be enabled as additional providers. Free-tier tool-calling reliability varies by model — test a chosen alias before long agent runs.
 - Token counts are estimates, not provider-reported usage.
 
 ---
@@ -272,7 +279,7 @@ response = client.chat.completions.create(model="meta-model", messages=[...], to
 call = response.choices[0].message.tool_calls[0]  # run it, append a role="tool" result, call again
 ```
 
-Streaming tool calls emit `delta.tool_calls` fragments plus a final chunk with `finish_reason: "tool_calls"`. Native tool passthrough is available on **Groq and NVIDIA** out of the box; the Cerebras, DeepSeek, Cloudflare, Ollama, and SambaNova clients can be enabled as additional providers. Gemini and Mistral are used for text only.
+Streaming tool calls emit `delta.tool_calls` fragments plus a final chunk with `finish_reason: "tool_calls"`. Native tool passthrough is available on **Groq, NVIDIA, Requesty, and Kilo Gateway** out of the box; the Cerebras, DeepSeek, Cloudflare, Ollama, and SambaNova clients can be enabled as additional providers. Gemini and Mistral are used for text only.
 
 ### Consistent output style & agent frameworks
 
@@ -471,6 +478,8 @@ flowchart TD
     B --> G[Groq]
     B --> H[Gemini]
     B --> I[NVIDIA]
+    B --> K[Requesty]
+    B --> L[Kilo Gateway]
     B -. optional clients .-> J[Mistral · Cerebras · DeepSeek<br/>Cloudflare · Ollama · SambaNova]
 ```
 
@@ -516,7 +525,7 @@ PRs welcome.
 
 Built with [FastAPI](https://fastapi.tiangolo.com/), [Pydantic](https://docs.pydantic.dev/), [httpx](https://www.python-httpx.org/), and AI coding tools.
 
-Powered by the free tiers of [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), and [NVIDIA](https://build.nvidia.com/) by default, with client support for [Mistral AI](https://mistral.ai/), [Cerebras](https://cerebras.ai/), [DeepSeek](https://deepseek.com/), [Cloudflare](https://cloudflare.com/), [Ollama](https://ollama.com/), and SambaNova.
+Powered by the free tiers of [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), [NVIDIA](https://build.nvidia.com/), [Requesty](https://requesty.ai/), and [Kilo Gateway](https://kilo.ai/docs/gateway) by default, with client support for [Mistral AI](https://mistral.ai/), [Cerebras](https://cerebras.ai/), [DeepSeek](https://deepseek.com/), [Cloudflare](https://cloudflare.com/), [Ollama](https://ollama.com/), and SambaNova.
 
 ---
 

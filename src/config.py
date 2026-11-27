@@ -34,6 +34,7 @@ class Settings:
         self.DEEPSEEK_APIKEY = ""
         self.NVIDIA_APIKEY = ""
         self.SAMBANOVA_APIKEY = ""
+        self.REQUESTY_APIKEY = ""
         self.CLOUDFLARE_API_TOKEN = ""
         self.CLOUDFLARE_ACCOUNT_ID = ""
         self.OLLAMA_BASE_URL = "http://localhost:11434"
@@ -60,13 +61,15 @@ class Settings:
         self.META_MODEL_NAME = "meta-model"
 
         # Claude Code tier aliases -> concrete provider/model pairs.
-        # These defaults point at tool-capable providers that are enabled
-        # out of the box; override them in settings.json or the environment.
+        # These defaults use Kilo Gateway's keyless free endpoints, which have
+        # been faster than the equivalent direct NVIDIA hosted models. They are
+        # tool-capable and enabled out of the box; override them in settings.json
+        # or the environment if you prefer another backend.
         self.CLAUDE_MODEL_MAP = {
-            "claude-fable-5-2": "nvidia/minimaxai/minimax-m3.1-flash",
-            "claude-opus-5-5": "nvidia/nemotron-3-ultra-550b-a55b",
-            "claude-sonnet-5-5": "nvidia/nemotron-3.5-super-vl-120b-a12b",
-            "claude-haiku-5-5": "nvidia/nemotron-3.5-lightning-30b-a3b",
+            "claude-fable-5-2": "kilogateway/baidu/ernie-5.5-flash-preview:free",
+            "claude-opus-5-5": "kilogateway/nvidia/nemotron-3-ultra-550b-a55b:free",
+            "claude-sonnet-5-5": "kilogateway/nvidia/nemotron-3.5-super-vl:free",
+            "claude-haiku-5-5": "kilogateway/nvidia/nemotron-3.5-lightning:free",
         }
 
         # Selection
@@ -237,6 +240,7 @@ class Settings:
         self.DEEPSEEK_APIKEY = os.getenv("DEEPSEEK_APIKEY", self.DEEPSEEK_APIKEY)
         self.NVIDIA_APIKEY = os.getenv("NVIDIA_APIKEY", self.NVIDIA_APIKEY)
         self.SAMBANOVA_APIKEY = os.getenv("SAMBANOVA_APIKEY", self.SAMBANOVA_APIKEY)
+        self.REQUESTY_APIKEY = os.getenv("REQUESTY_APIKEY", self.REQUESTY_APIKEY)
         self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", self.OLLAMA_BASE_URL)
 
         # Server

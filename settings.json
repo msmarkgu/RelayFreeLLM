@@ -60,12 +60,12 @@
   },
 
   "claude": {
-    "__model_map_comment": "Claude Code tier aliases mapped to provider/model pairs. Only tool-capable providers should be used here.",
+    "__model_map_comment": "Claude Code tier aliases mapped to provider/model pairs. Defaults use keyless Kilo Gateway free endpoints; only tool-capable providers should be used here.",
     "model_map": {
-      "claude-fable-5-2": "nvidia/minimaxai/minimax-m3.1-flash",
-      "claude-opus-5-5": "nvidia/nemotron-3-ultra-550b-a55b",
-      "claude-sonnet-5-5": "nvidia/nemotron-3.5-super-vl-120b-a12b",
-      "claude-haiku-5-5": "nvidia/nemotron-3.5-lightning-30b-a3b"
+      "claude-fable-5-2": "kilogateway/baidu/ernie-5.5-flash-preview:free",
+      "claude-opus-5-5": "kilogateway/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "claude-sonnet-5-5": "kilogateway/nvidia/nemotron-3.5-super-vl:free",
+      "claude-haiku-5-5": "kilogateway/nvidia/nemotron-3.5-lightning:free"
     }
   },
 

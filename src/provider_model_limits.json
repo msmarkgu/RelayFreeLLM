@@ -176,6 +176,180 @@
           "modality": "vision"
         }
       ]
+    },
+    {
+      "name": "Requesty",
+      "url": "https://requesty.ai",
+      "enabled": true,
+      "models": [
+        {
+          "name": "nvidia/nemotron-3-ultra-550b-a55b",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 262144,
+          "modality": "text"
+        },
+        {
+          "name": "google/gemma-4-31b-it",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 131072,
+          "modality": "text"
+        },
+        {
+          "name": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 131072,
+          "modality": "text"
+        },
+        {
+          "name": "nvidia/muse-glimmer-30b",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 131072,
+          "modality": "text"
+        },
+        {
+          "name": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 1048576,
+          "modality": "text"
+        }
+      ]
+    },
+    {
+      "name": "KiloGateway",
+      "url": "https://kilo.ai/docs/gateway",
+      "enabled": true,
+      "models": [
+        {
+          "name": "kilo-auto/free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 3,
+            "requests_per_hour": 200,
+            "requests_per_day": 4800,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 256000,
+          "modality": "text"
+        },
+        {
+          "name": "nvidia/nemotron-3-ultra-550b-a55b:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 3,
+            "requests_per_hour": 200,
+            "requests_per_day": 4800,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 1000000,
+          "modality": "text"
+        },
+        {
+          "name": "nvidia/nemotron-3.5-super-vl:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 3,
+            "requests_per_hour": 200,
+            "requests_per_day": 4800,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 1000000,
+          "modality": "vision"
+        },
+        {
+          "name": "baidu/ernie-5.5-flash-preview:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 3,
+            "requests_per_hour": 200,
+            "requests_per_day": 4800,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 1024000,
+          "modality": "text"
+        },
+        {
+          "name": "nvidia/nemotron-3.5-lightning:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 3,
+            "requests_per_hour": 200,
+            "requests_per_day": 4800,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 1000000,
+          "modality": "text"
+        }
+      ]
     }
   ]
 }

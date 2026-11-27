@@ -87,6 +87,9 @@ async def main():
             api_key_name = f"{provider_name.upper()}_APIKEY"
             if provider_name == "Ollama":
                 settings.get_api_key("OLLAMA_BASE_URL")
+            elif provider_name == "KiloGateway":
+                # Kilo's :free models work anonymously; no key is configured.
+                pass
             else:
                 settings.get_api_key(api_key_name)
         except ValueError:
