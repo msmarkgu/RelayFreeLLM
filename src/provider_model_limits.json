@@ -93,7 +93,7 @@
     {
       "name": "Nvidia",
       "url": "https://build.nvidia.com/explore/discover/models",
-      "enabled": true,
+      "enabled": false,
       "models": [
         {
           "name": "minimaxai/minimax-m3.1-flash",

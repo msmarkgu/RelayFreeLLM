@@ -9,7 +9,8 @@ Don't want to pay for AI APIs? RelayFreeLLM is an open-source gateway that combi
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="fake")
 ```
 
-**Enabled by default:** Groq · Gemini · NVIDIA · [Requesty](https://requesty.ai/) · [Kilo Gateway](https://kilo.ai/docs/gateway) · [DreamPrompting](https://dreamprompting.com/api-docs) · [Inferbase](https://inferbase.ai/docs/api) · [Routeway](https://docs.routeway.ai) — their free tiers require no credit card.<br>
+**Enabled by default:** Groq · Gemini · [Requesty](https://requesty.ai/) · [Kilo Gateway](https://kilo.ai/docs/gateway) · [DreamPrompting](https://dreamprompting.com/api-docs) · [Inferbase](https://inferbase.ai/docs/api) · [Routeway](https://docs.routeway.ai) — their free tiers require no credit card.<br>
+**Optional free client:** [NVIDIA](https://build.nvidia.com/) — no credit card required, but disabled by default because its models were unstable in testing.<br>
 **Optional hosted clients:** Mistral · Cerebras · DeepSeek · Cloudflare · SambaNova — signup may require a credit card or payment setup.
 
 Rather than cataloguing hundreds of free providers available on the web, RelayFreeLLM ships a curated set chosen for relatively generous free-tier quotas and reputable models.
@@ -36,7 +37,7 @@ Create a `.env` file in the project root with the keys for the providers enabled
 ```bash
 GEMINI_APIKEY=      # ai.google.dev
 GROQ_APIKEY=        # console.groq.com
-NVIDIA_APIKEY=      # build.nvidia.com
+NVIDIA_APIKEY=      # build.nvidia.com (optional; free but unstable)
 REQUESTY_APIKEY=    # requesty.ai
 DREAMPROMPTING_APIKEY= # dreamprompting.com (free signup)
 INFERBASE_APIKEY=   # inferbase.ai (free signup)
@@ -213,7 +214,7 @@ Override the mapping in `settings.json` under `claude.model_map`. Values are `pr
 - The adapter forces `X-Use-ServerSide-System-Prompt: false` internally, so Claude's own system prompt and tool-result history are forwarded verbatim. The separate [`/v1/agents/run`](#post-v1agentsrun) Map–Reduce API is unaffected.
 - Streaming produces standard Anthropic SSE events; streamed tool arguments are buffered per `tool_use` block before emission.
 - Thinking/reasoning from backend models is emitted as plain text, not signed Anthropic `thinking` blocks.
-- Tool loops work only with providers that have native tool passthrough: **Groq, NVIDIA, Requesty, Kilo Gateway, DreamPrompting, Inferbase, and Routeway** are enabled by default; Cerebras, DeepSeek, Cloudflare, Ollama, and SambaNova can be enabled as additional providers. Free-tier tool-calling reliability varies by model — test a chosen alias before long agent runs.
+- Tool loops work only with providers that have native tool passthrough: **Groq, Requesty, Kilo Gateway, DreamPrompting, Inferbase, and Routeway** are enabled by default; Cerebras, DeepSeek, Cloudflare, Ollama, SambaNova, and NVIDIA can be enabled as additional providers. NVIDIA needs no card but is disabled by default because its models were unstable in testing; free-tier tool-calling reliability varies by model — test a chosen alias before long agent runs.
 - Token counts are estimates, not provider-reported usage.
 
 ---
@@ -249,7 +250,7 @@ Useful for independent developers and students avoiding API bills, self-hosters 
 {"model": "meta-model"}                         // Any provider, picks the next available
 {"model": "meta-model", "model_type": "coding"} // Any coding model
 {"model": "meta-model", "model_scale": "large"} // Only large models
-{"model": "meta-model", "model_name": "nvidia"} // Prefer NVIDIA models
+{"model": "meta-model", "model_name": "gemma"}  // Prefer Gemma models
 {"model": "Gemini/gemini-2.5-flash"}            // Specific provider/model
 ```
 
@@ -259,7 +260,7 @@ Useful for independent developers and students avoiding API bills, self-hosters 
 Request → Groq (rate limited)
         → Circuit breaker activates (60s cooldown)
         → Retry → Gemini
-        → Retry → NVIDIA
+        → Retry → Routeway
         → Success ✓
 ```
 
@@ -288,7 +289,7 @@ response = client.chat.completions.create(model="meta-model", messages=[...], to
 call = response.choices[0].message.tool_calls[0]  # run it, append a role="tool" result, call again
 ```
 
-Streaming tool calls emit `delta.tool_calls` fragments plus a final chunk with `finish_reason: "tool_calls"`. Native tool passthrough is available on **Groq, NVIDIA, Requesty, Kilo Gateway, DreamPrompting, Inferbase, and Routeway** out of the box; the Cerebras, DeepSeek, Cloudflare, Ollama, and SambaNova clients can be enabled as additional providers. Gemini and Mistral are used for text only.
+Streaming tool calls emit `delta.tool_calls` fragments plus a final chunk with `finish_reason: "tool_calls"`. Native tool passthrough is available on **Groq, Requesty, Kilo Gateway, DreamPrompting, Inferbase, and Routeway** out of the box; the Cerebras, DeepSeek, Cloudflare, Ollama, SambaNova, and NVIDIA clients can be enabled as additional providers; NVIDIA is free but unstable and disabled by default. Gemini and Mistral are used for text only.
 
 ### Consistent output style & agent frameworks
 
@@ -486,13 +487,12 @@ flowchart TD
     end
     B --> G[Groq]
     B --> H[Gemini]
-    B --> I[NVIDIA]
     B --> K[Requesty]
     B --> L[Kilo Gateway]
     B --> M[DreamPrompting]
     B --> N[Inferbase]
     B --> O[Routeway]
-    B -. optional clients .-> J[Mistral · Cerebras · DeepSeek<br/>Cloudflare · Ollama · SambaNova]
+    B -. optional clients .-> J[Mistral · Cerebras · DeepSeek<br/>Cloudflare · Ollama · SambaNova · NVIDIA (free, unstable)]
 ```
 
 </details>
@@ -537,7 +537,7 @@ PRs welcome.
 
 Built with [FastAPI](https://fastapi.tiangolo.com/), [Pydantic](https://docs.pydantic.dev/), [httpx](https://www.python-httpx.org/), and AI coding tools.
 
-Powered by the free tiers of [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), [NVIDIA](https://build.nvidia.com/), [Requesty](https://requesty.ai/), [Kilo Gateway](https://kilo.ai/docs/gateway), [DreamPrompting](https://dreamprompting.com/api-docs), [Inferbase](https://inferbase.ai/docs/api), and [Routeway](https://docs.routeway.ai) by default, with client support for [Mistral AI](https://mistral.ai/), [Cerebras](https://cerebras.ai/), [DeepSeek](https://deepseek.com/), [Cloudflare](https://cloudflare.com/), [Ollama](https://ollama.com/), and SambaNova.
+Powered by the free tiers of [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), [Requesty](https://requesty.ai/), [Kilo Gateway](https://kilo.ai/docs/gateway), [DreamPrompting](https://dreamprompting.com/api-docs), [Inferbase](https://inferbase.ai/docs/api), and [Routeway](https://docs.routeway.ai) by default, with client support for [Mistral AI](https://mistral.ai/), [Cerebras](https://cerebras.ai/), [DeepSeek](https://deepseek.com/), [Cloudflare](https://cloudflare.com/), [Ollama](https://ollama.com/), SambaNova, and [NVIDIA](https://build.nvidia.com/) (free but unstable, disabled by default).
 
 ---
 
