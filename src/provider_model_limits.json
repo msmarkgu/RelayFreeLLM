@@ -231,22 +231,6 @@
           "modality": "text"
         },
         {
-          "name": "nvidia/muse-glimmer-30b",
-          "type": "text",
-          "scale": "medium",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 20,
-            "requests_per_hour": 200,
-            "requests_per_day": 200,
-            "tokens_per_minute": -1,
-            "tokens_per_hour": -1,
-            "tokens_per_day": -1
-          },
-          "Max_Context_Length": 131072,
-          "modality": "text"
-        },
-        {
           "name": "nvidia/nemotron-3.5-lightning-30b-a3b",
           "type": "text",
           "scale": "medium",

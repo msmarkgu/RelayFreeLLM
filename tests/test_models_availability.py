@@ -14,32 +14,40 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("ModelChecker")
 
 
-async def _test_model(registry, provider_name, model_name):
-    """Test a single model's availability."""
-    try:
-        client = registry.get_client(provider_name)
-        logger.info(f"\nTesting {provider_name} - {model_name}...")
+async def _test_model(
+    registry, provider_name, model_name, limiter, delay=0.0
+):
+    """Test a single model's availability, serialised per provider."""
+    async with limiter:
+        try:
+            client = registry.get_client(provider_name)
+            logger.info(f"\nTesting {provider_name} - {model_name}...")
 
-        response = await client.call_model_api(
-            messages=[
-                {"role": "system", "content": "Be brief."},
-                {"role": "user", "content": "Hi, introduce yourself."}
-            ],
-            model=model_name,
-            temperature=0.1,
-            max_tokens=1000
-        )
+            response = await client.call_model_api(
+                messages=[
+                    {"role": "system", "content": "Be brief."},
+                    {"role": "user", "content": "Hi, introduce yourself."}
+                ],
+                model=model_name,
+                temperature=0.1,
+                max_tokens=1000
+            )
 
-        if response:
-            logger.info(f"✅ {provider_name} - {model_name}: SUCCESS")
-            return (provider_name, model_name, True, "Success")
-        else:
-            logger.error(f"❌ {provider_name} - {model_name}: EMPTY RESPONSE")
-            return (provider_name, model_name, False, "Empty response")
+            if response:
+                logger.info(f"✅ {provider_name} - {model_name}: SUCCESS")
+                return (provider_name, model_name, True, "Success")
+            else:
+                logger.error(f"❌ {provider_name} - {model_name}: EMPTY RESPONSE")
+                return (provider_name, model_name, False, "Empty response")
 
-    except Exception as e:
-        logger.error(f"❌ {provider_name} - {model_name}: FAILED - {str(e)}")
-        return (provider_name, model_name, False, str(e))
+        except Exception as e:
+            logger.error(f"❌ {provider_name} - {model_name}: FAILED - {str(e)}")
+            return (provider_name, model_name, False, str(e))
+        finally:
+            # Hold the provider's semaphore during the gap so calls to the same
+            # provider never overlap. Providers remain free to run in parallel.
+            if delay > 0:
+                await asyncio.sleep(delay)
 
 
 async def main():
@@ -49,6 +57,12 @@ async def main():
         nargs="?",
         default=None,
         help="Provider name to test (e.g., 'Nvidia', 'Groq'). If not specified, tests all providers."
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=2.0,
+        help="Seconds to wait between calls to the same provider (default: 2.0).",
     )
     args = parser.parse_args()
 
@@ -72,6 +86,11 @@ async def main():
     else:
         providers_to_test = available_providers
 
+    logger.info(
+        "Serialising calls per provider with a %.1fs gap; providers still run in parallel.",
+        args.delay,
+    )
+    limiters = {provider: asyncio.Semaphore(1) for provider in providers_to_test}
     tasks = []
     for provider_data in data["providers"]:
         provider_name = provider_data["name"]
@@ -98,7 +117,15 @@ async def main():
 
         for model_data in provider_data["models"]:
             model_name = model_data["name"]
-            tasks.append(_test_model(registry, provider_name, model_name))
+            tasks.append(
+                _test_model(
+                    registry,
+                    provider_name,
+                    model_name,
+                    limiters[provider_name],
+                    args.delay,
+                )
+            )
 
     if not tasks:
         logger.error("No models found or no API keys configured.")

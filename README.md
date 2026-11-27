@@ -17,6 +17,29 @@ Rather than cataloguing hundreds of free providers available on the web, RelayFr
 
 The gateway also speaks the **Anthropic Messages API**, so coding agents like **Claude Code** can use the same local endpoint with tool calling, streaming, and Claude-style model aliases — no Anthropic account required. See [Using Claude Code](#using-claude-code).
 
+## Verified Availability
+
+As of **2026-11-27**, all **27 default curated models** passed a live availability check:
+
+| Provider | Models checked | Result |
+|----------|---------------:|--------|
+| Groq | 4 | ✅ 4/4 |
+| Gemini | 1 | ✅ 1/1 |
+| Requesty | 4 | ✅ 4/4 |
+| DreamPrompting | 3 | ✅ 3/3 |
+| Inferbase | 5 | ✅ 5/5 |
+| Routeway | 5 | ✅ 5/5 |
+| KiloGateway | 5 | ✅ 5/5 |
+| **Total** | **27** | **✅ 27/27** |
+
+NVIDIA is excluded because it is disabled by default. Results depend on the keys in `.env` and current provider health; reproduce with:
+
+```bash
+python tests/test_models_availability.py --delay 2
+```
+
+The script serialises calls to the same provider with a 2-second gap to avoid in-flight request limits while still running different providers in parallel.
+
 ---
 
 ## Quick Start
@@ -46,17 +69,42 @@ ROUTEWAY_APIKEY=    # routeway.ai (free signup)
 
 The other provider clients ship in `src/api_clients/` but have no models enabled by default. To use one, add its credentials (see [`.env.example`](.env.example)) and enable its models under that provider in [`provider_model_limits.json`](src/provider_model_limits.json) or through the Admin Dashboard. Ollama needs no key — just a running local server (`OLLAMA_BASE_URL`).
 
-**Requesty example:** Requesty is enabled by default and needs only `REQUESTY_APIKEY=<your key>` in `.env`; no credit card is required. Its free models have a daily request allowance. Requesty model ids can contain a `/` (e.g. `nvidia/nemotron-3-ultra-550b-a55b`); in specific-routing requests prefix the provider once: `requesty/nvidia/nemotron-3-ultra-550b-a55b`. Requesty routes bare model names across its own providers, so its free-tier limits are per organization, not per upstream provider.
+<details>
+<summary>Requesty example</summary>
 
-**Kilo Gateway example:** Kilo Gateway needs no API key and no credit card. Anonymous access is limited to 200 requests/hour/IP and only to free models. In specific-routing requests prefix the provider once: `kilogateway/nvidia/nemotron-3.5-lightning:free`. Paid Kilo models are not exposed by this client.
+Requesty is enabled by default and needs only `REQUESTY_APIKEY=<your key>` in `.env`; no credit card is required. Its free models have a daily request allowance. Requesty model ids can contain a `/` (e.g. `nvidia/nemotron-3-ultra-550b-a55b`); in specific-routing requests prefix the provider once: `requesty/nvidia/nemotron-3-ultra-550b-a55b`. Requesty routes bare model names across its own providers, so its free-tier limits are per organization, not per upstream provider.
+
+</details>
+
+<details>
+<summary>Kilo Gateway example</summary>
+
+Kilo Gateway needs no API key and no credit card. Anonymous access is limited to 200 requests/hour/IP and only to free models. In specific-routing requests prefix the provider once: `kilogateway/nvidia/nemotron-3.5-lightning:free`. Paid Kilo models are not exposed by this client.
 
 The curated Kilo free set is chosen for coding-agent use: `kilo-auto/free` (Kilo's curated free router), `nvidia/nemotron-3-ultra-550b-a55b:free`, `nvidia/nemotron-3.5-super-vl:free`, `baidu/ernie-5.5-flash-preview:free`, and `nvidia/nemotron-3.5-lightning:free`. All five support tool calling and streaming. `kilo-auto/free` rotates underlying models, which may log prompts and outputs — avoid sending confidential code with it.
 
-**DreamPrompting example:** DreamPrompting is enabled by default and needs a free `DREAMPROMPTING_APIKEY` from dreamprompting.com; no credit card is required. It is OpenAI-compatible, supports tool calling and streaming, and gives each account 500,000 tokens and 5,000 requests per rolling 24 hours (100 requests/minute per IP, 32,000 input tokens/request). Use `dreamprompting/auto` for gateway-managed failover, or pin a listed model such as `dreamprompting/groq/openai/gpt-oss-120b`.
+</details>
 
-**Inferbase example:** Inferbase is enabled by default and needs a free `INFERBASE_APIKEY` starting with `inf_`; no credit card is required. It is OpenAI-compatible with native tool calling and streaming. The Free plan allows 5,000 requests/month, 100 managed requests and $0.50 of managed usage/day (10 requests/minute), and caps each request at 8,192 input and 1,024 output tokens. Use `inferbase/auto` to route within the free price band; pinned models above that band are refused by Inferbase with a 402. Curated tool-capable coding models include `deepseek-v4-flash`, `openai-gpt-oss-120b`, `qwen3-coder-480b-a35b-instruct`, and `zai-glm-4-7`.
+<details>
+<summary>DreamPrompting example</summary>
 
-**Routeway example:** Routeway is enabled by default and needs a free `ROUTEWAY_APIKEY` from routeway.ai; no credit card is required. Its Starter plan allows 200 requests/day on free models with a shared low-priority queue and one concurrent request. Routeway is OpenAI-compatible with native tool calling and SSE streaming. Only five curated Gemma 4 26B free finetunes are exposed, such as `routeway/gemma-4-26b-a4b-it-chimerax:free`; pay-as-you-go models, Routeway's MiniMax free model (unreliable), and the uncurated Darksoul finetune are filtered out. Free-model limits are 5 requests/minute and 200/day (429 on excess).
+DreamPrompting is enabled by default and needs a free `DREAMPROMPTING_APIKEY` from dreamprompting.com; no credit card is required. It is OpenAI-compatible, supports tool calling and streaming, and gives each account 500,000 tokens and 5,000 requests per rolling 24 hours (100 requests/minute per IP, 32,000 input tokens/request). Use `dreamprompting/auto` for gateway-managed failover, or pin a listed model such as `dreamprompting/groq/openai/gpt-oss-120b`.
+
+</details>
+
+<details>
+<summary>Inferbase example</summary>
+
+Inferbase is enabled by default and needs a free `INFERBASE_APIKEY` starting with `inf_`; no credit card is required. It is OpenAI-compatible with native tool calling and streaming. The Free plan allows 5,000 requests/month, 100 managed requests and $0.50 of managed usage/day (10 requests/minute), and caps each request at 8,192 input and 1,024 output tokens. Use `inferbase/auto` to route within the free price band; pinned models above that band are refused by Inferbase with a 402. Curated tool-capable coding models include `deepseek-v4-flash`, `openai-gpt-oss-120b`, `qwen3-coder-480b-a35b-instruct`, and `zai-glm-4-7`.
+
+</details>
+
+<details>
+<summary>Routeway example</summary>
+
+Routeway is enabled by default and needs a free `ROUTEWAY_APIKEY` from routeway.ai; no credit card is required. Its Starter plan allows 200 requests/day on free models with a shared low-priority queue and one concurrent request. Routeway is OpenAI-compatible with native tool calling and SSE streaming. Only five curated Gemma 4 26B free finetunes are exposed, such as `routeway/gemma-4-26b-a4b-it-chimerax:free`; pay-as-you-go models, Routeway's MiniMax free model (unreliable), and the uncurated Darksoul finetune are filtered out. Free-model limits are 5 requests/minute and 200/day (429 on excess).
+
+</details>
 
 ### 3. Start the server
 
@@ -230,7 +278,7 @@ Override the mapping in `settings.json` under `claude.model_map`. Values are `pr
 | **Session affinity** | Pin conversations to a provider via `X-Session-ID` for context-caching benefits; sessions migrate if that provider fails. |
 | **Context management** | Static, Dynamic, Reservoir, and Adaptive modes, with extractive summarization for long conversations. |
 | **Consistent output style** | Universal style guidance plus response normalizers; opt out per request for agent frameworks. |
-| **Intent-based routing** | `model_type=coding`, `model_scale=large`, `model_name=nvidia` — say what you need, not which API to call. |
+| **Intent-based routing** | `model_type=coding`, `model_scale=large`, `model_name=gemma` — say what you need, not which API to call. |
 | **Image-aware routing** | Messages with image content are routed only to vision-capable models. |
 | **Real-time streaming** | Full SSE streaming from every backend provider. |
 | **Local + cloud** | Mix a local Ollama instance with cloud free tiers. |
