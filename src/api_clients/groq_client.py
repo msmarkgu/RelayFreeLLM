@@ -19,6 +19,8 @@ class GroqClient(ApiInterface):
 
     PROVIDER_NAME = "Groq"
     supports_tools = True
+    # Groq rejects max_completion_tokens above this value for its models.
+    max_output_tokens_cap = 16384
 
     def __init__(self):
         api_key = settings.get_api_key("GROQ_APIKEY")

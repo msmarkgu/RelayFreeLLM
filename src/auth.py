@@ -2,8 +2,9 @@
 
 The gateway binds to loopback by default, but other local processes can still
 reach it. Setting ``RELAY_AUTH_TOKEN`` closes that gap: every API/admin request
-must present the token, while ``/`` and ``/health`` remain public for readiness
-probes and harness launchers.
+must present the token, while ``/``, ``/health`` and ``/v1/models`` remain
+public. The model list contains no secrets and Claude Code discovers its aliases
+through ``/v1/models`` before it has a chance to send an auth header.
 """
 
 import hmac
@@ -11,7 +12,7 @@ import hmac
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-PUBLIC_PATHS = frozenset({"/", "/health"})
+PUBLIC_PATHS = frozenset({"/", "/health", "/v1/models"})
 
 
 def _unauthorized() -> JSONResponse:

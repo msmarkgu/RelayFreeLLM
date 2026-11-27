@@ -1,4 +1,4 @@
-"""Bearer-token gate: optional, loopback-safe, with public health checks."""
+"""Bearer-token gate: optional, loopback-safe, with public health/model discovery."""
 
 import os
 import sys
@@ -35,6 +35,10 @@ def build_client(token: str) -> TestClient:
     def models():
         return {"object": "list", "data": []}
 
+    @app.post("/v1/chat/completions")
+    def chat_completions():
+        return {"choices": []}
+
     return TestClient(app)
 
 
@@ -45,7 +49,7 @@ class TestBearerAuthMiddleware(unittest.TestCase):
 
     def test_missing_token_is_rejected_with_envelope(self):
         client = build_client("secret")
-        response = client.get("/v1/models")
+        response = client.post("/v1/chat/completions")
         self.assertEqual(response.status_code, 401)
         self.assertEqual(
             response.json()["error"]["type"], "authentication_error"
@@ -55,25 +59,30 @@ class TestBearerAuthMiddleware(unittest.TestCase):
     def test_wrong_scheme_and_wrong_token_are_rejected(self):
         client = build_client("secret")
         self.assertEqual(
-            client.get("/v1/models", headers={"Authorization": "Basic secret"}).status_code,
+            client.post(
+                "/v1/chat/completions", headers={"Authorization": "Basic secret"}
+            ).status_code,
             401,
         )
         self.assertEqual(
-            client.get("/v1/models", headers={"Authorization": "Bearer nope"}).status_code,
+            client.post(
+                "/v1/chat/completions", headers={"Authorization": "Bearer nope"}
+            ).status_code,
             401,
         )
 
     def test_correct_token_is_accepted(self):
         client = build_client("secret")
-        response = client.get(
-            "/v1/models", headers={"Authorization": "Bearer secret"}
+        response = client.post(
+            "/v1/chat/completions", headers={"Authorization": "Bearer secret"}
         )
         self.assertEqual(response.status_code, 200)
 
-    def test_health_and_preflight_remain_public(self):
+    def test_health_model_discovery_and_preflight_remain_public(self):
         client = build_client("secret")
         self.assertEqual(client.get("/").status_code, 200)
         self.assertEqual(client.get("/health").status_code, 200)
+        self.assertEqual(client.get("/v1/models").status_code, 200)
         response = client.options(
             "/v1/models",
             headers={

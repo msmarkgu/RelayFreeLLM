@@ -18,6 +18,11 @@ class ApiInterface(ABC):
     # Set to True by clients that can forward tool definitions and surface
     # tool calls in their responses.
     supports_tools: bool = False
+    # Providers whose API rejects large completion budgets (e.g. Groq's
+    # ``max_completion_tokens``) declare a ceiling here. The dispatcher clamps
+    # requests before forwarding them, so context budgeting agrees with what
+    # is actually sent upstream.
+    max_output_tokens_cap: int | None = None
 
     @abstractmethod
     async def call_model_api(

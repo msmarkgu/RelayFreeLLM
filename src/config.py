@@ -63,10 +63,10 @@ class Settings:
         # These defaults point at tool-capable providers that are enabled
         # out of the box; override them in settings.json or the environment.
         self.CLAUDE_MODEL_MAP = {
-            "claude-fable-5-2": "groq/qwen/qwen3.8-27b",
-            "claude-opus-5-5": "groq/openai/gpt-oss-120b",
-            "claude-sonnet-5-5": "groq/qwen/qwen3.6-27b",
-            "claude-haiku-5-5": "nvidia/minimaxai/minimax-m3.1-flash",
+            "claude-fable-5-2": "nvidia/minimaxai/minimax-m3.1-flash",
+            "claude-opus-5-5": "nvidia/nemotron-3-ultra-550b-a55b",
+            "claude-sonnet-5-5": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+            "claude-haiku-5-5": "nvidia/nemotron-3.5-lightning-30b-a3b",
         }
 
         # Selection

@@ -3,9 +3,9 @@
 #
 # Usage: ./scripts/relay-claude [claude args...]
 #
-# The gateway is started automatically if /health is not reachable. Set
-# RELAY_AUTH_TOKEN to reuse a fixed token; otherwise a random one is generated
-# for this session.
+# The gateway is started automatically if /health is not reachable. A fixed
+# token is read from RELAY_AUTH_TOKEN in the environment or in .env; otherwise
+# a random one is generated for this session.
 
 set -euo pipefail
 
@@ -21,6 +21,9 @@ while IFS='=' read -r name _; do
     esac
 done < <(env)
 
+if [ -z "${RELAY_AUTH_TOKEN:-}" ] && [ -f .env ]; then
+    RELAY_AUTH_TOKEN="$(python -c 'from dotenv import dotenv_values; print(dotenv_values(".env").get("RELAY_AUTH_TOKEN", ""))' 2>/dev/null || true)"
+fi
 if [ -z "${RELAY_AUTH_TOKEN:-}" ]; then
     RELAY_AUTH_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
 fi
@@ -54,7 +57,7 @@ export CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST=1
 export CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1
 export CLAUDE_CODE_AUTO_MODE_SERVER=0
 export CLAUDE_CODE_DISABLE_ADVISOR_TOOL=1
-export CLAUDE_CODE_AUTO_COMPACT_WINDOW="${CLAUDE_CODE_AUTO_COMPACT_WINDOW:-32000}"
+export CLAUDE_CODE_AUTO_COMPACT_WINDOW="${CLAUDE_CODE_AUTO_COMPACT_WINDOW:-200000}"
 
 # Keep Claude waiting while the gateway owns retries and failover.
 export CLAUDE_ENABLE_STREAM_WATCHDOG=0

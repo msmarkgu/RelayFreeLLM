@@ -77,6 +77,21 @@ class ModelDispatcher:
         self.affinity_lock = asyncio.Lock()
         self.provider_locks = defaultdict(asyncio.Lock)
 
+    def _canonical_provider_name(self, name: str) -> str:
+        """Resolve a case-insensitive provider prefix to its registered name.
+
+        Claude tier aliases use lower-case prefixes such as ``groq/...`` while
+        provider clients are registered with display names like ``Groq``.
+        Without this normalization, specific routing fails at the registry
+        lookup and downstream provider lookups (context limits, modality).
+        """
+        known_names = list(self.registry.list_providers())
+        known_names.extend(getattr(self.selector, "providers", {}) or {})
+        for known in known_names:
+            if known.casefold() == name.casefold():
+                return known
+        return name
+
     # ── Primary "meta model" entry point (OpenAI-compatible) ────────
 
     async def chat(
@@ -144,6 +159,7 @@ class ModelDispatcher:
         if "/" in request.model and request.model != "meta-model":
             try:
                 raw_provider, model_name = request.model.split("/", 1)
+                raw_provider = self._canonical_provider_name(raw_provider)
 
                 # Prefer user-specified provider; fall back to another if needed
                 provider_name = raw_provider
@@ -514,6 +530,22 @@ class ModelDispatcher:
         self.logger.info(f"Calling {provider_name} model: {model_name} (stream={stream})")
 
         api_client = self.registry.get_client(provider_name)
+
+        # Some providers (notably Groq) cap max_completion_tokens well below
+        # what Claude Code requests. Clamp here so both the context budget and
+        # the upstream request use the same, accepted value.
+        output_cap = getattr(api_client, "max_output_tokens_cap", None)
+        if (
+            isinstance(output_cap, int)
+            and output_cap > 0
+            and max_tokens is not None
+            and max_tokens > output_cap
+        ):
+            self.logger.info(
+                f"Capping max_tokens for {provider_name}/{model_name}: "
+                f"{max_tokens} -> {output_cap}"
+            )
+            max_tokens = output_cap
 
         if tools and not getattr(api_client, "supports_tools", False):
             raise ProviderError(
