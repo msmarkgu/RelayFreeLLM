@@ -9,7 +9,7 @@ Don't want to pay for AI APIs? RelayFreeLLM is an open-source gateway that combi
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="fake")
 ```
 
-**Enabled by default:** Groq · Gemini · NVIDIA · [Requesty](https://requesty.ai/) · [Kilo Gateway](https://kilo.ai/docs/gateway) · [DreamPrompting](https://dreamprompting.com/api-docs) · [Inferbase](https://inferbase.ai/docs/api) — their free tiers require no credit card.<br>
+**Enabled by default:** Groq · Gemini · NVIDIA · [Requesty](https://requesty.ai/) · [Kilo Gateway](https://kilo.ai/docs/gateway) · [DreamPrompting](https://dreamprompting.com/api-docs) · [Inferbase](https://inferbase.ai/docs/api) · [Routeway](https://docs.routeway.ai) — their free tiers require no credit card.<br>
 **Optional hosted clients:** Mistral · Cerebras · DeepSeek · Cloudflare · SambaNova — signup may require a credit card or payment setup.
 
 Rather than cataloguing hundreds of free providers available on the web, RelayFreeLLM ships a curated set chosen for relatively generous free-tier quotas and reputable models.
@@ -40,6 +40,7 @@ NVIDIA_APIKEY=      # build.nvidia.com
 REQUESTY_APIKEY=    # requesty.ai
 DREAMPROMPTING_APIKEY= # dreamprompting.com (free signup)
 INFERBASE_APIKEY=   # inferbase.ai (free signup)
+ROUTEWAY_APIKEY=    # routeway.ai (free signup)
 ```
 
 The other provider clients ship in `src/api_clients/` but have no models enabled by default. To use one, add its credentials (see [`.env.example`](.env.example)) and enable its models under that provider in [`provider_model_limits.json`](src/provider_model_limits.json) or through the Admin Dashboard. Ollama needs no key — just a running local server (`OLLAMA_BASE_URL`).
@@ -53,6 +54,8 @@ The curated Kilo free set is chosen for coding-agent use: `kilo-auto/free` (Kilo
 **DreamPrompting example:** DreamPrompting is enabled by default and needs a free `DREAMPROMPTING_APIKEY` from dreamprompting.com; no credit card is required. It is OpenAI-compatible, supports tool calling and streaming, and gives each account 500,000 tokens and 5,000 requests per rolling 24 hours (100 requests/minute per IP, 32,000 input tokens/request). Use `dreamprompting/auto` for gateway-managed failover, or pin a listed model such as `dreamprompting/groq/openai/gpt-oss-120b`.
 
 **Inferbase example:** Inferbase is enabled by default and needs a free `INFERBASE_APIKEY` starting with `inf_`; no credit card is required. It is OpenAI-compatible with native tool calling and streaming. The Free plan allows 5,000 requests/month, 100 managed requests and $0.50 of managed usage/day (10 requests/minute), and caps each request at 8,192 input and 1,024 output tokens. Use `inferbase/auto` to route within the free price band; pinned models above that band are refused by Inferbase with a 402. Curated tool-capable coding models include `deepseek-v4-flash`, `openai-gpt-oss-120b`, `qwen3-coder-480b-a35b-instruct`, and `zai-glm-4-7`.
+
+**Routeway example:** Routeway is enabled by default and needs a free `ROUTEWAY_APIKEY` from routeway.ai; no credit card is required. Its Starter plan allows 200 requests/day on free models with a shared low-priority queue and one concurrent request. Routeway is OpenAI-compatible with native tool calling and SSE streaming. Only five curated Gemma 4 26B free finetunes are exposed, such as `routeway/gemma-4-26b-a4b-it-chimerax:free`; pay-as-you-go models, Routeway's MiniMax free model (unreliable), and the uncurated Darksoul finetune are filtered out. Free-model limits are 5 requests/minute and 200/day (429 on excess).
 
 ### 3. Start the server
 
@@ -210,7 +213,7 @@ Override the mapping in `settings.json` under `claude.model_map`. Values are `pr
 - The adapter forces `X-Use-ServerSide-System-Prompt: false` internally, so Claude's own system prompt and tool-result history are forwarded verbatim. The separate [`/v1/agents/run`](#post-v1agentsrun) Map–Reduce API is unaffected.
 - Streaming produces standard Anthropic SSE events; streamed tool arguments are buffered per `tool_use` block before emission.
 - Thinking/reasoning from backend models is emitted as plain text, not signed Anthropic `thinking` blocks.
-- Tool loops work only with providers that have native tool passthrough: **Groq, NVIDIA, Requesty, Kilo Gateway, DreamPrompting, and Inferbase** are enabled by default; Cerebras, DeepSeek, Cloudflare, Ollama, and SambaNova can be enabled as additional providers. Free-tier tool-calling reliability varies by model — test a chosen alias before long agent runs.
+- Tool loops work only with providers that have native tool passthrough: **Groq, NVIDIA, Requesty, Kilo Gateway, DreamPrompting, Inferbase, and Routeway** are enabled by default; Cerebras, DeepSeek, Cloudflare, Ollama, and SambaNova can be enabled as additional providers. Free-tier tool-calling reliability varies by model — test a chosen alias before long agent runs.
 - Token counts are estimates, not provider-reported usage.
 
 ---
@@ -285,7 +288,7 @@ response = client.chat.completions.create(model="meta-model", messages=[...], to
 call = response.choices[0].message.tool_calls[0]  # run it, append a role="tool" result, call again
 ```
 
-Streaming tool calls emit `delta.tool_calls` fragments plus a final chunk with `finish_reason: "tool_calls"`. Native tool passthrough is available on **Groq, NVIDIA, Requesty, Kilo Gateway, DreamPrompting, and Inferbase** out of the box; the Cerebras, DeepSeek, Cloudflare, Ollama, and SambaNova clients can be enabled as additional providers. Gemini and Mistral are used for text only.
+Streaming tool calls emit `delta.tool_calls` fragments plus a final chunk with `finish_reason: "tool_calls"`. Native tool passthrough is available on **Groq, NVIDIA, Requesty, Kilo Gateway, DreamPrompting, Inferbase, and Routeway** out of the box; the Cerebras, DeepSeek, Cloudflare, Ollama, and SambaNova clients can be enabled as additional providers. Gemini and Mistral are used for text only.
 
 ### Consistent output style & agent frameworks
 
@@ -488,6 +491,7 @@ flowchart TD
     B --> L[Kilo Gateway]
     B --> M[DreamPrompting]
     B --> N[Inferbase]
+    B --> O[Routeway]
     B -. optional clients .-> J[Mistral · Cerebras · DeepSeek<br/>Cloudflare · Ollama · SambaNova]
 ```
 
@@ -533,7 +537,7 @@ PRs welcome.
 
 Built with [FastAPI](https://fastapi.tiangolo.com/), [Pydantic](https://docs.pydantic.dev/), [httpx](https://www.python-httpx.org/), and AI coding tools.
 
-Powered by the free tiers of [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), [NVIDIA](https://build.nvidia.com/), [Requesty](https://requesty.ai/), [Kilo Gateway](https://kilo.ai/docs/gateway), [DreamPrompting](https://dreamprompting.com/api-docs), and [Inferbase](https://inferbase.ai/docs/api) by default, with client support for [Mistral AI](https://mistral.ai/), [Cerebras](https://cerebras.ai/), [DeepSeek](https://deepseek.com/), [Cloudflare](https://cloudflare.com/), [Ollama](https://ollama.com/), and SambaNova.
+Powered by the free tiers of [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), [NVIDIA](https://build.nvidia.com/), [Requesty](https://requesty.ai/), [Kilo Gateway](https://kilo.ai/docs/gateway), [DreamPrompting](https://dreamprompting.com/api-docs), [Inferbase](https://inferbase.ai/docs/api), and [Routeway](https://docs.routeway.ai) by default, with client support for [Mistral AI](https://mistral.ai/), [Cerebras](https://cerebras.ai/), [DeepSeek](https://deepseek.com/), [Cloudflare](https://cloudflare.com/), [Ollama](https://ollama.com/), and SambaNova.
 
 ---
 

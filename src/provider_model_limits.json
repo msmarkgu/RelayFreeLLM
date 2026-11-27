@@ -407,6 +407,93 @@
       ]
     },
     {
+      "name": "Routeway",
+      "url": "https://docs.routeway.ai",
+      "enabled": true,
+      "models": [
+        {
+          "name": "gemma-4-26b-a4b-it-chimerax:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 62000,
+          "modality": "text"
+        },
+        {
+          "name": "gemma-4-26b-a4b-it-luminous:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 62000,
+          "modality": "text"
+        },
+        {
+          "name": "gemma-4-26b-a4b-it-moonlight:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 62000,
+          "modality": "text"
+        },
+        {
+          "name": "gemma-4-26b-a4b-it-musica:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 62000,
+          "modality": "text"
+        },
+        {
+          "name": "gemma-4-26b-a4b-it-meromero:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 62000,
+          "modality": "text"
+        }
+      ]
+    },
+    {
       "name": "KiloGateway",
       "url": "https://kilo.ai/docs/gateway",
       "enabled": true,
