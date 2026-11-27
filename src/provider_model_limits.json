@@ -320,6 +320,93 @@
       ]
     },
     {
+      "name": "Inferbase",
+      "url": "https://inferbase.ai/docs/api",
+      "enabled": true,
+      "models": [
+        {
+          "name": "auto",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 10,
+            "requests_per_hour": 100,
+            "requests_per_day": 100,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 8192,
+          "modality": "text"
+        },
+        {
+          "name": "deepseek-v4-flash",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 10,
+            "requests_per_hour": 100,
+            "requests_per_day": 100,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 8192,
+          "modality": "text"
+        },
+        {
+          "name": "openai-gpt-oss-120b",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 10,
+            "requests_per_hour": 100,
+            "requests_per_day": 100,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 8192,
+          "modality": "text"
+        },
+        {
+          "name": "qwen3-coder-480b-a35b-instruct",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 10,
+            "requests_per_hour": 100,
+            "requests_per_day": 100,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 8192,
+          "modality": "text"
+        },
+        {
+          "name": "zai-glm-4-7",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 10,
+            "requests_per_hour": 100,
+            "requests_per_day": 100,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 8192,
+          "modality": "text"
+        }
+      ]
+    },
+    {
       "name": "KiloGateway",
       "url": "https://kilo.ai/docs/gateway",
       "enabled": true,

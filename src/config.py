@@ -36,6 +36,7 @@ class Settings:
         self.SAMBANOVA_APIKEY = ""
         self.REQUESTY_APIKEY = ""
         self.DREAMPROMPTING_APIKEY = ""
+        self.INFERBASE_APIKEY = ""
         self.CLOUDFLARE_API_TOKEN = ""
         self.CLOUDFLARE_ACCOUNT_ID = ""
         self.OLLAMA_BASE_URL = "http://localhost:11434"
@@ -245,6 +246,7 @@ class Settings:
         self.DREAMPROMPTING_APIKEY = os.getenv(
             "DREAMPROMPTING_APIKEY", self.DREAMPROMPTING_APIKEY
         )
+        self.INFERBASE_APIKEY = os.getenv("INFERBASE_APIKEY", self.INFERBASE_APIKEY)
         self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", self.OLLAMA_BASE_URL)
 
         # Server
