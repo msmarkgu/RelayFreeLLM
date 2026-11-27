@@ -1,0 +1,11 @@
+[
+  {
+    "choices": [{"index": 0, "delta": {"content": "Partial answer"}, "finish_reason": null}]
+  },
+  {
+    "error": {
+      "message": "Upstream connection closed unexpectedly",
+      "type": "upstream_error"
+    }
+  }
+]

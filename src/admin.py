@@ -54,6 +54,16 @@ async def chat_ui():
         raise HTTPException(status_code=404, detail="Chat UI not found")
 
 
+@admin_router.get("/agents", response_class=HTMLResponse)
+async def agents_ui():
+    html_path = os.path.join(CUR_DIR, "static", "agents.html")
+    try:
+        with open(html_path, "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Agents UI not found")
+
+
 @admin_router.get("/admin/api/limits")
 async def get_limits():
     try:

@@ -7,6 +7,12 @@ from ..config import settings
 from ..exceptions import ProviderError, RateLimitError
 from ..logging_util import ProjectLogger
 from .api_interface import ApiInterface
+from .tool_support import (
+    ToolResponse,
+    serialize_tools,
+    tool_call_deltas,
+    tool_calls_from_message,
+)
 
 
 class OllamaClient(ApiInterface):
@@ -16,6 +22,7 @@ class OllamaClient(ApiInterface):
     """
 
     PROVIDER_NAME = "Ollama"
+    supports_tools = True
 
     def __init__(self):
         self.base_url = settings.OLLAMA_BASE_URL.rstrip("/")
@@ -40,11 +47,14 @@ class OllamaClient(ApiInterface):
         temperature: float,
         max_tokens: int,
         stream: bool = False,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> str | AsyncGenerator[str, None]:
         """
         Call Ollama's chat completions endpoint.
         """
         url = f"{self.base_url}/v1/chat/completions"
+        tool_payload = serialize_tools(tools)
         payload = {
             "model": model,
             "messages": messages,
@@ -52,16 +62,26 @@ class OllamaClient(ApiInterface):
             "max_tokens": max_tokens,
             "stream": stream,
         }
+        if tool_payload:
+            payload["tools"] = tool_payload
+            if tool_choice is not None:
+                payload["tool_choice"] = tool_choice
 
         try:
             if stream:
-                return self._handle_stream(url, payload)
+                return self._handle_stream(url, payload, bool(tool_payload))
 
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(url, json=payload)
                 response.raise_for_status()
                 data = response.json()
-                return data["choices"][0]["message"]["content"]
+                message = data["choices"][0]["message"]
+                if tool_payload:
+                    return ToolResponse(
+                        content=message.get("content") or "",
+                        tool_calls=tool_calls_from_message(message),
+                    )
+                return message["content"]
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 429:
@@ -70,7 +90,9 @@ class OllamaClient(ApiInterface):
         except Exception as e:
             raise ProviderError("Ollama", str(e)) from e
 
-    async def _handle_stream(self, url: str, payload: dict) -> AsyncGenerator[str, None]:
+    async def _handle_stream(
+        self, url: str, payload: dict, with_tools: bool = False
+    ) -> AsyncGenerator[str, None]:
         """Generator for Ollama's streaming responses."""
         async with httpx.AsyncClient(timeout=60.0) as client:
             async with client.stream("POST", url, json=payload) as response:
@@ -85,8 +107,11 @@ class OllamaClient(ApiInterface):
                         
                     try:
                         data = json.loads(data_str)
-                        content = data["choices"][0]["delta"].get("content", "")
+                        delta = data["choices"][0]["delta"]
+                        content = delta.get("content", "")
                         if content:
                             yield content
+                        if with_tools and delta.get("tool_calls"):
+                            yield {"tool_calls": tool_call_deltas(delta)}
                     except json.JSONDecodeError:
                         continue

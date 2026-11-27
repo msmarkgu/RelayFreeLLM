@@ -93,7 +93,7 @@
     {
       "name": "Nvidia",
       "url": "https://build.nvidia.com/explore/discover/models",
-      "enabled": true,
+      "enabled": false,
       "models": [
         {
           "name": "minimaxai/minimax-m3.1-flash",
@@ -162,7 +162,7 @@
         {
           "name": "z-ai/glm-5.3-flash",
           "type": "text",
-          "scale": "large",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
@@ -174,6 +174,393 @@
           },
           "Max_Context_Length": 1048576,
           "modality": "vision"
+        }
+      ]
+    },
+    {
+      "name": "Requesty",
+      "url": "https://requesty.ai",
+      "enabled": true,
+      "models": [
+        {
+          "name": "nvidia/nemotron-3-ultra-550b-a55b",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 262144,
+          "modality": "text"
+        },
+        {
+          "name": "google/gemma-4-31b-it",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 131072,
+          "modality": "text"
+        },
+        {
+          "name": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 131072,
+          "modality": "text"
+        },
+        {
+          "name": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 20,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 1048576,
+          "modality": "text"
+        }
+      ]
+    },
+    {
+      "name": "DreamPrompting",
+      "url": "https://dreamprompting.com/api-docs",
+      "enabled": true,
+      "models": [
+        {
+          "name": "auto",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 100,
+            "requests_per_hour": 5000,
+            "requests_per_day": 5000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": 500000
+          },
+          "Max_Context_Length": 32000,
+          "modality": "text"
+        },
+        {
+          "name": "groq/openai/gpt-oss-120b",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 100,
+            "requests_per_hour": 5000,
+            "requests_per_day": 5000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": 500000
+          },
+          "Max_Context_Length": 32000,
+          "modality": "text"
+        },
+        {
+          "name": "google/gemini-3.1-flash-lite",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 100,
+            "requests_per_hour": 5000,
+            "requests_per_day": 5000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": 500000
+          },
+          "Max_Context_Length": 32000,
+          "modality": "text"
+        }
+      ]
+    },
+    {
+      "name": "Inferbase",
+      "url": "https://inferbase.ai/docs/api",
+      "enabled": true,
+      "models": [
+        {
+          "name": "auto",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 10,
+            "requests_per_hour": 100,
+            "requests_per_day": 100,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 8192,
+          "modality": "text"
+        },
+        {
+          "name": "deepseek-v4-flash",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 10,
+            "requests_per_hour": 100,
+            "requests_per_day": 100,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 8192,
+          "modality": "text"
+        },
+        {
+          "name": "openai-gpt-oss-120b",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 10,
+            "requests_per_hour": 100,
+            "requests_per_day": 100,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 8192,
+          "modality": "text"
+        },
+        {
+          "name": "qwen3-coder-480b-a35b-instruct",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 10,
+            "requests_per_hour": 100,
+            "requests_per_day": 100,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 8192,
+          "modality": "text"
+        },
+        {
+          "name": "zai-glm-4-7",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 10,
+            "requests_per_hour": 100,
+            "requests_per_day": 100,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 8192,
+          "modality": "text"
+        }
+      ]
+    },
+    {
+      "name": "Routeway",
+      "url": "https://docs.routeway.ai",
+      "enabled": true,
+      "models": [
+        {
+          "name": "gemma-4-26b-a4b-it-chimerax:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 62000,
+          "modality": "text"
+        },
+        {
+          "name": "gemma-4-26b-a4b-it-luminous:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 62000,
+          "modality": "text"
+        },
+        {
+          "name": "gemma-4-26b-a4b-it-moonlight:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 62000,
+          "modality": "text"
+        },
+        {
+          "name": "gemma-4-26b-a4b-it-musica:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 62000,
+          "modality": "text"
+        },
+        {
+          "name": "gemma-4-26b-a4b-it-meromero:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 5,
+            "requests_per_hour": 200,
+            "requests_per_day": 200,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 62000,
+          "modality": "text"
+        }
+      ]
+    },
+    {
+      "name": "KiloGateway",
+      "url": "https://kilo.ai/docs/gateway",
+      "enabled": true,
+      "models": [
+        {
+          "name": "kilo-auto/free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 3,
+            "requests_per_hour": 200,
+            "requests_per_day": 4800,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 256000,
+          "modality": "text"
+        },
+        {
+          "name": "nvidia/nemotron-3-ultra-550b-a55b:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 3,
+            "requests_per_hour": 200,
+            "requests_per_day": 4800,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 1000000,
+          "modality": "text"
+        },
+        {
+          "name": "nvidia/nemotron-3.5-super-vl:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 3,
+            "requests_per_hour": 200,
+            "requests_per_day": 4800,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 1000000,
+          "modality": "vision"
+        },
+        {
+          "name": "baidu/ernie-5.5-flash-preview:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 3,
+            "requests_per_hour": 200,
+            "requests_per_day": 4800,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 1024000,
+          "modality": "text"
+        },
+        {
+          "name": "nvidia/nemotron-3.5-lightning:free",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 3,
+            "requests_per_hour": 200,
+            "requests_per_day": 4800,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": -1
+          },
+          "Max_Context_Length": 1000000,
+          "modality": "text"
         }
       ]
     }

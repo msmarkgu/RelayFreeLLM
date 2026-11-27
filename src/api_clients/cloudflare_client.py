@@ -6,11 +6,13 @@ from ..config import settings
 from ..exceptions import ProviderError, RateLimitError, AuthenticationError
 from ..logging_util import ProjectLogger
 from .api_interface import ApiInterface
+from .tool_support import ToolResponse, serialize_tools, tool_calls_from_message
 
 
 class CloudflareClient(ApiInterface):
 
     PROVIDER_NAME = "Cloudflare"
+    supports_tools = True
 
     def __init__(self):
         try:
@@ -51,7 +53,12 @@ class CloudflareClient(ApiInterface):
                              messages: list[dict], 
                              model="@cf/meta/llama-3.1-8b-instruct", 
                              temperature=0.8, 
-                             max_tokens=2048) -> str:
+                             max_tokens=2048,
+                             stream: bool = False,
+                             tools: list[dict] | None = None,
+                             tool_choice: str | dict | None = None) -> str:
+        if stream:
+            raise ProviderError("Cloudflare", "Streaming is not supported by this client.")
         if not self.api_token or not self.account_id:
             raise AuthenticationError("Cloudflare", "Cloudflare credentials missing.")
 
@@ -61,6 +68,7 @@ class CloudflareClient(ApiInterface):
             "Content-Type": "application/json"
         }
 
+        tool_payload = serialize_tools(tools)
         payload = {
             "messages": messages,
 
@@ -68,6 +76,10 @@ class CloudflareClient(ApiInterface):
             "temperature": temperature,
             "max_tokens": max_tokens
         }
+        if tool_payload:
+            payload["tools"] = tool_payload
+            if tool_choice is not None:
+                payload["tool_choice"] = tool_choice
 
         try:
             async with httpx.AsyncClient(timeout=settings.REQUEST_TIMEOUT_SECONDS) as client:
@@ -77,7 +89,13 @@ class CloudflareClient(ApiInterface):
                 
                 if response.status_code == 200:
                     data = response.json()
-                    return data["choices"][0]["message"]["content"]
+                    message = data["choices"][0]["message"]
+                    if tool_payload:
+                        return ToolResponse(
+                            content=message.get("content") or "",
+                            tool_calls=tool_calls_from_message(message),
+                        )
+                    return message["content"]
                 elif response.status_code == 429:
                     raise RateLimitError("Cloudflare", f"Rate limited: {response.text}")
                 elif response.status_code in (401, 403):

@@ -1,0 +1,22 @@
+[
+  {
+    "choices": [{
+      "index": 0,
+      "delta": {"reasoning_content": "First I should check "},
+      "finish_reason": null
+    }]
+  },
+  {
+    "choices": [{
+      "index": 0,
+      "delta": {"reasoning_content": "the tool schema, then call it."},
+      "finish_reason": null
+    }]
+  },
+  {
+    "choices": [{"index": 0, "delta": {"content": "Done."}, "finish_reason": null}]
+  },
+  {
+    "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]
+  }
+]

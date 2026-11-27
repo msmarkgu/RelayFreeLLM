@@ -17,9 +17,11 @@ from .exceptions import (
     AuthenticationError,
     AllProvidersExhaustedError,
 )
+from .api_clients.tool_support import ToolResponse, serialize_tools
 from .models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
+    ToolCall,
     build_response,
     build_error_response,
     ChatMessage
@@ -33,6 +35,18 @@ from .context_manager import ContextManager
 from .config import settings
 from typing import List, Optional, Union
 import asyncio
+
+
+def _message_to_dict(msg: ChatMessage) -> dict:
+    """Serialize a ChatMessage, retaining tool-call fields for provider APIs."""
+    data = {"role": msg.role, "content": msg.content}
+    if msg.tool_call_id:
+        data["tool_call_id"] = msg.tool_call_id
+    if msg.tool_calls:
+        data["tool_calls"] = [
+            call.model_dump(exclude_none=True) for call in msg.tool_calls
+        ]
+    return data
 
 
 def _request_contains_images(request: ChatCompletionRequest) -> bool:
@@ -62,6 +76,21 @@ class ModelDispatcher:
         self.session_affinity_map = {}
         self.affinity_lock = asyncio.Lock()
         self.provider_locks = defaultdict(asyncio.Lock)
+
+    def _canonical_provider_name(self, name: str) -> str:
+        """Resolve a case-insensitive provider prefix to its registered name.
+
+        Claude tier aliases use lower-case prefixes such as ``groq/...`` while
+        provider clients are registered with display names like ``Groq``.
+        Without this normalization, specific routing fails at the registry
+        lookup and downstream provider lookups (context limits, modality).
+        """
+        known_names = list(self.registry.list_providers())
+        known_names.extend(getattr(self.selector, "providers", {}) or {})
+        for known in known_names:
+            if known.casefold() == name.casefold():
+                return known
+        return name
 
     # ── Primary "meta model" entry point (OpenAI-compatible) ────────
 
@@ -103,6 +132,8 @@ class ModelDispatcher:
         sys_prompt = request.get_system_prompt()
         temperature = request.temperature
         max_tokens = request.max_tokens
+        tools_payload = serialize_tools(request.tools)
+        tool_choice = request.tool_choice
         response_format = request.response_format
         stream = request.stream
 
@@ -128,6 +159,7 @@ class ModelDispatcher:
         if "/" in request.model and request.model != "meta-model":
             try:
                 raw_provider, model_name = request.model.split("/", 1)
+                raw_provider = self._canonical_provider_name(raw_provider)
 
                 # Prefer user-specified provider; fall back to another if needed
                 provider_name = raw_provider
@@ -193,6 +225,7 @@ class ModelDispatcher:
                                     error_message="Request contains images but no "
                                     "vision-capable models are available.",
                                     attempt=1,
+                                    error_type="invalid_request_error",
                                 )
 
                 start_time = time.time()
@@ -208,39 +241,65 @@ class ModelDispatcher:
                     conversation_history=conversation_history,
                     session_id=session_id,
                     client_messages=client_messages,
+                    tools=tools_payload,
+                    tool_choice=tool_choice,
                 )
                 latency_ms = (time.time() - start_time) * 1000
+
+                tool_calls = None
+                content = model_resp
+                if isinstance(model_resp, ToolResponse):
+                    content = model_resp.content
+                    tool_calls = [ToolCall(**call) for call in model_resp.tool_calls]
 
                 if stream:
                     return self._stream_with_meta(model_resp, provider_name, model_name)
 
+                prompt_tokens = self.selector.estimate_tokens(user_prompt)
+                completion_tokens = self.selector.estimate_tokens(content)
                 if self.usage_tracker:
                     self.usage_tracker.record_usage(
                         provider_name,
                         model_name,
-                        self.selector.estimate_tokens(user_prompt),
-                        self.selector.estimate_tokens(model_resp),
+                        prompt_tokens,
+                        completion_tokens,
                     )
 
                 return build_response(
-                    content=model_resp,
+                    content=content,
                     provider=provider_name,
                     model=model_name,
                     latency_ms=latency_ms,
                     attempt=1,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    tool_calls=tool_calls,
                 )
             except Exception as e:
                 self.logger.error(f"Specific routing to {request.model} failed: {e}\n{traceback.format_exc()}")
                 return build_error_response(
                     error_message=f"Specific routing to {request.model} failed: {str(e)}",
                     attempt=1,
+                    error_type="upstream_error",
                 )
 
         # Case 2: Meta Model Routing (Default) - with optional type/scale filter
         max_retries = settings.MAX_RETRIES
         attempt = 0
         exclude_providers: list[str] = []
+        if tools_payload:
+            # Never route a tool request to a provider that cannot return
+            # tool calls; let the selector choose only capable backends.
+            for name in list(self.selector.providers):
+                try:
+                    client = self.registry.get_client(name)
+                except Exception:
+                    continue
+                if client is None or not getattr(client, "supports_tools", False):
+                    exclude_providers.append(name)
+
         last_error = ""
+        last_error_type = "server_error"
 
         # Determine affinity
         preferred_provider = None
@@ -291,6 +350,7 @@ class ModelDispatcher:
                         return build_error_response(
                             error_message=f"All models are at capacity. Wait time {wait_time:.1f}s exceeds limit.",
                             attempt=attempt + 1,
+                            error_type="rate_limit_error",
                         )
 
                     self.logger.info(
@@ -315,8 +375,16 @@ class ModelDispatcher:
                     conversation_history=conversation_history,
                     session_id=session_id,
                     client_messages=client_messages,
+                    tools=tools_payload,
+                    tool_choice=tool_choice,
                 )
                 latency_ms = (time.time() - start_time) * 1000
+
+                tool_calls = None
+                content = model_resp
+                if isinstance(model_resp, ToolResponse):
+                    content = model_resp.content
+                    tool_calls = [ToolCall(**call) for call in model_resp.tool_calls]
 
                 if stream:
                     # Update Session Affinity on successful stream start
@@ -329,12 +397,14 @@ class ModelDispatcher:
                             }
                     return self._stream_with_meta(model_resp, provider_name, model_name)
 
+                prompt_tokens = self.selector.estimate_tokens(user_prompt)
+                completion_tokens = self.selector.estimate_tokens(content)
                 if self.usage_tracker:
                     self.usage_tracker.record_usage(
                         provider_name,
                         model_name,
-                        self.selector.estimate_tokens(user_prompt),
-                        self.selector.estimate_tokens(model_resp),
+                        prompt_tokens,
+                        completion_tokens,
                     )
 
                 # Update Session Affinity on success
@@ -347,23 +417,32 @@ class ModelDispatcher:
                         }
 
                 return build_response(
-                    content=model_resp,
+                    content=content,
                     provider=provider_name,
                     model=model_name,
                     latency_ms=latency_ms,
                     attempt=attempt + 1,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    tool_calls=tool_calls,
                 )
 
             except AuthenticationError as e:
                 self.logger.error(f"Auth failure for {e.provider}: {e}")
                 attempt += 1
                 last_error = str(e)
+                last_error_type = "authentication_error"
                 if "provider_name" in locals():
                     exclude_providers.append(provider_name)
 
             except (ProviderError, RateLimitError) as e:
                 attempt += 1
                 last_error = str(e)
+                last_error_type = (
+                    "rate_limit_error"
+                    if isinstance(e, RateLimitError)
+                    else "upstream_error"
+                )
                 self.logger.warning(f"Attempt {attempt} failed: {last_error}")
 
                 if "provider_name" in locals() and "model_name" in locals():
@@ -376,6 +455,7 @@ class ModelDispatcher:
             except Exception as e:
                 attempt += 1
                 last_error = str(e)
+                last_error_type = "server_error"
                 self.logger.warning(f"Attempt {attempt} unexpected error: {last_error}")
                 if "provider_name" in locals():
                     exclude_providers.append(provider_name)
@@ -387,11 +467,13 @@ class ModelDispatcher:
                 return build_error_response(
                     error_message=f"All retries failed. Last error: {last_error}",
                     attempt=attempt,
+                    error_type=last_error_type,
                 )
 
         return build_error_response(
             error_message="Unexpected retry loop exit",
             attempt=attempt,
+            error_type=last_error_type,
         )
 
     # ── Streaming metadata wrapper ───────────────────────────────
@@ -417,6 +499,8 @@ class ModelDispatcher:
         conversation_history: Optional[List[ChatMessage]] = None,
         session_id: str = "default",
         client_messages: Optional[List[ChatMessage]] = None,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> str | object:
         """
         Call a specific provider's model API.
@@ -447,6 +531,28 @@ class ModelDispatcher:
 
         api_client = self.registry.get_client(provider_name)
 
+        # Some providers (notably Groq) cap max_completion_tokens well below
+        # what Claude Code requests. Clamp here so both the context budget and
+        # the upstream request use the same, accepted value.
+        output_cap = getattr(api_client, "max_output_tokens_cap", None)
+        if (
+            isinstance(output_cap, int)
+            and output_cap > 0
+            and max_tokens is not None
+            and max_tokens > output_cap
+        ):
+            self.logger.info(
+                f"Capping max_tokens for {provider_name}/{model_name}: "
+                f"{max_tokens} -> {output_cap}"
+            )
+            max_tokens = output_cap
+
+        if tools and not getattr(api_client, "supports_tools", False):
+            raise ProviderError(
+                provider_name,
+                f"Provider '{provider_name}' does not support tool calling.",
+            )
+
         response_format_dict = None
         if response_format:
             response_format_dict = {"type": getattr(response_format, "type", None)}
@@ -465,17 +571,22 @@ class ModelDispatcher:
             target_context_tokens = self._calculate_target_context_tokens(
                 provider_name, model_name, max_tokens
             )
-            selected_history = self.context_manager.select_context_for_request(
-                client_messages,
-                session_id=session_id,
-                target_context_tokens=target_context_tokens,
-            )
+            if tools:
+                # Tool loops must keep tool_use/tool_result pairs adjacent and
+                # in order; reservoir summarisation would corrupt them.
+                selected_history = client_messages
+            else:
+                selected_history = self.context_manager.select_context_for_request(
+                    client_messages,
+                    session_id=session_id,
+                    target_context_tokens=target_context_tokens,
+                )
             # Preserve original content (string or list w/ image_url parts)
             # for multimodal support; use get_text() only for the empty check.
             messages = [
-                {"role": msg.role, "content": msg.content}
+                _message_to_dict(msg)
                 for msg in selected_history
-                if msg.get_text().strip()
+                if msg.get_text().strip() or msg.tool_calls
             ]
             self.logger.debug(
                 f"Verbatim path: forwarded {len(messages)} "
@@ -501,9 +612,9 @@ class ModelDispatcher:
                 # Preserve original content for multimodal support; use
                 # get_text() only for the empty check.
                 context_messages = [
-                    {"role": msg.role, "content": msg.content}
+                    _message_to_dict(msg)
                     for msg in selected_history
-                    if msg.get_text().strip()
+                    if msg.get_text().strip() or msg.tool_calls
                 ]
 
                 self.logger.debug(
@@ -550,6 +661,8 @@ class ModelDispatcher:
                     temperature=temperature or settings.DEFAULT_TEMPERATURE,
                     max_tokens=max_tokens or settings.DEFAULT_MAX_TOKENS,
                     stream=stream,
+                    tools=tools,
+                    tool_choice=tool_choice,
                 )
         else:
             model_resp = await api_client.call_model_api(
@@ -558,6 +671,8 @@ class ModelDispatcher:
                 temperature=temperature or settings.DEFAULT_TEMPERATURE,
                 max_tokens=max_tokens or settings.DEFAULT_MAX_TOKENS,
                 stream=stream,
+                tools=tools,
+                tool_choice=tool_choice,
             )
 
         # Update usage tracking for context (for dynamic mode)
@@ -577,7 +692,12 @@ class ModelDispatcher:
             self.context_manager.update_usage(session_id, context_tokens)
 
         if not stream:
-            normalized_resp = self.normalizer.normalize(model_resp, response_format_dict)
+            if isinstance(model_resp, ToolResponse):
+                normalized_resp = model_resp
+            else:
+                normalized_resp = self.normalizer.normalize(
+                    model_resp, response_format_dict
+                )
             self.logger.debug(f"Model response:\n{normalized_resp}")
             return normalized_resp
         return model_resp

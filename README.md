@@ -1,28 +1,269 @@
 # RelayFreeLLM
 
-> **One endpoint. More free AI than any single provider. Less rate limit headaches.**
+> One endpoint. More free inference, fewer rate-limit surprises.
 
-Don't want to pay $$/month to use AI Models? RelayFreeLLM is an open-source gateway that combines **multiple free-tier providers** into a single OpenAI-compatible API — so you get aggregately more free inference with automatic failover.
+Don't want to pay for AI APIs? RelayFreeLLM is an open-source gateway that combines free-tier providers behind a single OpenAI-compatible API, with automatic failover when a model or provider runs out of quota.
 
-```
+```python
 # Your existing code works. Just change the URL.
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="fake")
 ```
 
-**Gemini · Groq · Mistral · DeepSeek · NVIDIA · Cerebras · Cloudflare · Ollama**
+**Enabled by default:** Groq · Gemini · [Requesty](https://requesty.ai/) · [Kilo Gateway](https://kilo.ai/docs/gateway) · [DreamPrompting](https://dreamprompting.com/api-docs) · [Inferbase](https://inferbase.ai/docs/api) · [Routeway](https://docs.routeway.ai) — their free tiers require no credit card.<br>
+**Optional free client:** [NVIDIA](https://build.nvidia.com/) — no credit card required, but disabled by default because its models were unstable in testing.<br>
+**Optional hosted clients:** Mistral · Cerebras · DeepSeek · Cloudflare · SambaNova — signup may require a credit card or payment setup.
 
-No code changes. No retry logic. No 429 errors breaking your app.
+Rather than cataloguing hundreds of free providers available on the web, RelayFreeLLM ships a curated set chosen for relatively generous free-tier quotas and reputable models.
+
+The gateway also speaks the **Anthropic Messages API**, so coding agents like **Claude Code** can use the same local endpoint with tool calling, streaming, and Claude-style model aliases — no Anthropic account required. See [Using Claude Code](#using-claude-code).
+
+## Verified Availability
+
+As of **2026-11-27**, all **27 default curated models** passed a live availability check:
+
+| Provider | Models checked | Result |
+|----------|---------------:|--------|
+| Groq | 4 | ✅ 4/4 |
+| Gemini | 1 | ✅ 1/1 |
+| Requesty | 4 | ✅ 4/4 |
+| DreamPrompting | 3 | ✅ 3/3 |
+| Inferbase | 5 | ✅ 5/5 |
+| Routeway | 5 | ✅ 5/5 |
+| KiloGateway | 5 | ✅ 5/5 |
+| **Total** | **27** | **✅ 27/27** |
+
+NVIDIA is excluded because it is disabled by default. Results depend on the keys in `.env` and current provider health; reproduce with:
+
+```bash
+python tests/test_models_availability.py --delay 2
+```
+
+The script serialises calls to the same provider with a 2-second gap to avoid in-flight request limits while still running different providers in parallel.
 
 ---
 
-## The Free Tier Problem → The RelayFreeLLM Solution
+## Quick Start
 
+### 1. Install
+
+```bash
+git clone https://github.com/msmarkgu/RelayFreeLLM.git && cd RelayFreeLLM
+pip install -r requirements.txt
 ```
-❌ Groq hits rate limit → Your app crashes       ✅ Gemini fails → Automatically tries Groq
-❌ Gemini quota exhausted → User sees error       ✅ One provider down → Traffic routes to others
-❌ Switching providers → Rewrite your integration  ✅ Same API for everyone → OpenAI-compatible
-❌ Testing 5 providers → 5 different SDKs          ✅ More providers = More throughput
+
+Already installed? Pull the latest code and refresh dependencies with `git pull && pip install -r requirements.txt`.
+
+### 2. Add API keys
+
+Create a `.env` file in the project root with the keys for the providers enabled by default:
+
+```bash
+GEMINI_APIKEY=      # ai.google.dev
+GROQ_APIKEY=        # console.groq.com
+NVIDIA_APIKEY=      # build.nvidia.com (optional; free but unstable)
+REQUESTY_APIKEY=    # requesty.ai
+DREAMPROMPTING_APIKEY= # dreamprompting.com (free signup)
+INFERBASE_APIKEY=   # inferbase.ai (free signup)
+ROUTEWAY_APIKEY=    # routeway.ai (free signup)
 ```
+
+The other provider clients ship in `src/api_clients/` but have no models enabled by default. To use one, add its credentials (see [`.env.example`](.env.example)) and enable its models under that provider in [`provider_model_limits.json`](src/provider_model_limits.json) or through the Admin Dashboard. Ollama needs no key — just a running local server (`OLLAMA_BASE_URL`).
+
+<details>
+<summary>Requesty example</summary>
+
+Requesty is enabled by default and needs only `REQUESTY_APIKEY=<your key>` in `.env`; no credit card is required. Its free models have a daily request allowance. Requesty model ids can contain a `/` (e.g. `nvidia/nemotron-3-ultra-550b-a55b`); in specific-routing requests prefix the provider once: `requesty/nvidia/nemotron-3-ultra-550b-a55b`. Requesty routes bare model names across its own providers, so its free-tier limits are per organization, not per upstream provider.
+
+</details>
+
+<details>
+<summary>Kilo Gateway example</summary>
+
+Kilo Gateway needs no API key and no credit card. Anonymous access is limited to 200 requests/hour/IP and only to free models. In specific-routing requests prefix the provider once: `kilogateway/nvidia/nemotron-3.5-lightning:free`. Paid Kilo models are not exposed by this client.
+
+The curated Kilo free set is chosen for coding-agent use: `kilo-auto/free` (Kilo's curated free router), `nvidia/nemotron-3-ultra-550b-a55b:free`, `nvidia/nemotron-3.5-super-vl:free`, `baidu/ernie-5.5-flash-preview:free`, and `nvidia/nemotron-3.5-lightning:free`. All five support tool calling and streaming. `kilo-auto/free` rotates underlying models, which may log prompts and outputs — avoid sending confidential code with it.
+
+</details>
+
+<details>
+<summary>DreamPrompting example</summary>
+
+DreamPrompting is enabled by default and needs a free `DREAMPROMPTING_APIKEY` from dreamprompting.com; no credit card is required. It is OpenAI-compatible, supports tool calling and streaming, and gives each account 500,000 tokens and 5,000 requests per rolling 24 hours (100 requests/minute per IP, 32,000 input tokens/request). Use `dreamprompting/auto` for gateway-managed failover, or pin a listed model such as `dreamprompting/groq/openai/gpt-oss-120b`.
+
+</details>
+
+<details>
+<summary>Inferbase example</summary>
+
+Inferbase is enabled by default and needs a free `INFERBASE_APIKEY` starting with `inf_`; no credit card is required. It is OpenAI-compatible with native tool calling and streaming. The Free plan allows 5,000 requests/month, 100 managed requests and $0.50 of managed usage/day (10 requests/minute), and caps each request at 8,192 input and 1,024 output tokens. Use `inferbase/auto` to route within the free price band; pinned models above that band are refused by Inferbase with a 402. Curated tool-capable coding models include `deepseek-v4-flash`, `openai-gpt-oss-120b`, `qwen3-coder-480b-a35b-instruct`, and `zai-glm-4-7`.
+
+</details>
+
+<details>
+<summary>Routeway example</summary>
+
+Routeway is enabled by default and needs a free `ROUTEWAY_APIKEY` from routeway.ai; no credit card is required. Its Starter plan allows 200 requests/day on free models with a shared low-priority queue and one concurrent request. Routeway is OpenAI-compatible with native tool calling and SSE streaming. Only five curated Gemma 4 26B free finetunes are exposed, such as `routeway/gemma-4-26b-a4b-it-chimerax:free`; pay-as-you-go models, Routeway's MiniMax free model (unreliable), and the uncurated Darksoul finetune are filtered out. Free-model limits are 5 requests/minute and 200/day (429 on excess).
+
+</details>
+
+### 3. Start the server
+
+```bash
+python -m src.server
+```
+
+### 4. Make a request
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="relay-free")
+response = client.chat.completions.create(
+    model="meta-model",  # routes to any available model
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+print(response.choices[0].message.content)
+```
+
+To route to a specific model, pass `provider/model`:
+
+```python
+response = client.chat.completions.create(
+    model="groq/qwen/qwen3.8-27b",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+```
+
+### 5. Use it with Claude Code
+
+Set the token once in `.env` (see Optional setup below):
+
+```bash
+RELAY_AUTH_TOKEN=my-relay-secret-12345
+```
+
+Then run:
+
+```bash
+./scripts/relay-claude          # extra args are passed to `claude`, e.g. --resume
+```
+
+The launcher reads `.env`, starts the gateway if needed (so step 3 is optional), sets the `ANTHROPIC_*` variables, and runs Claude Code. If the gateway is already running with a token from elsewhere, put that same value in `.env` or export it in the shell. For the VS Code extension or manual setup, see [Using Claude Code](#using-claude-code).
+
+### Optional setup
+
+<details>
+<summary><strong>Bearer token auth</strong> (recommended for agent use)</summary>
+
+Add `RELAY_AUTH_TOKEN=your-random-secret` to `.env` to require `Authorization: Bearer <token>` on all API/admin routes. `/` and `/health` stay public. The server binds to `127.0.0.1` and allows only localhost CORS origins. Leave the value empty to disable the gate for local chat/admin use; `scripts/relay-claude` then sends a harmless placeholder credential to Claude Code.
+
+</details>
+
+<details>
+<summary><strong>Docker</strong></summary>
+
+```bash
+docker build -t relayfreellm .
+docker run --rm --env-file .env -p 127.0.0.1:8000:8000 relayfreellm
+```
+
+The image sets `HOST=0.0.0.0`; publish to loopback as shown.
+
+</details>
+
+<details>
+<summary><strong>Verify model availability</strong></summary>
+
+`python -m tests.test_models_availability` checks every registry model and prints a total (e.g. `TOTAL: 10/10 models available.`). Pass a provider name to filter, e.g. `python -m tests.test_models_availability Groq`.
+
+</details>
+
+<details>
+<summary><strong>Web UIs</strong></summary>
+
+[`/admin`](http://localhost:8000/admin) — limits and usage · [`/chat`](http://localhost:8000/chat) — streaming chat. See [Web UIs](#web-uis).
+
+</details>
+
+---
+
+## Using Claude Code
+
+RelayFreeLLM can act as a local Anthropic backend for Claude Code, in both the terminal and the VS Code extension. It exposes `/v1/messages`, `/v1/messages/count_tokens`, and a Claude-projected `/v1/models`, so no external Anthropic account is needed.
+
+### One-command launcher
+
+```bash
+./scripts/relay-claude [extra claude args...]
+```
+
+The launcher:
+
+- starts the gateway on `127.0.0.1:8000` if `/health` is not reachable (logs go to `relay-server.log`, override with `RELAY_LOG_FILE`);
+- reads the bearer token from `RELAY_AUTH_TOKEN` in the shell or `.env`, generating a random session token if neither is set;
+- scrubs inherited `ANTHROPIC_*` variables, then sets `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, and `ANTHROPIC_MODEL` (default `claude-sonnet-5-5`);
+- sets Claude Code flags for managed-provider mode, gateway model discovery, a 200k auto-compact window, and disables client watchdogs/timeouts so the gateway owns retries;
+- runs `claude` with any extra arguments you pass.
+
+If the gateway is **already running**, put the token that server was started with in `.env` (or export it in the shell); otherwise the launcher's generated token will not be accepted.
+
+Windows: put `RELAY_AUTH_TOKEN` in `.env`, start the server separately (`python -m src.server`), then run `scripts\relay-claude.cmd`.
+
+### Manual configuration
+
+If you set the environment yourself:
+
+```bash
+export ANTHROPIC_BASE_URL=http://127.0.0.1:8000
+export ANTHROPIC_AUTH_TOKEN="$RELAY_AUTH_TOKEN"
+export ANTHROPIC_MODEL=claude-sonnet-5-5
+claude
+```
+
+### VS Code extension
+
+Install the official **Claude Code** extension from the VS Code Marketplace, start the gateway with `RELAY_AUTH_TOKEN` set, then open **Preferences: Open User Settings (JSON)** and add:
+
+```json
+{
+  "claudeCode.disableLoginPrompt": true,
+  "claudeCode.environmentVariables": [
+    { "name": "ANTHROPIC_BASE_URL", "value": "http://127.0.0.1:8000" },
+    { "name": "ANTHROPIC_AUTH_TOKEN", "value": "<RELAY_AUTH_TOKEN>" },
+    { "name": "ANTHROPIC_MODEL", "value": "claude-sonnet-5-5" },
+    { "name": "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY", "value": "1" },
+    { "name": "CLAUDE_CODE_DISABLE_ADVISOR_TOOL", "value": "1" },
+    { "name": "CLAUDE_ENABLE_STREAM_WATCHDOG", "value": "0" },
+    { "name": "CLAUDE_ENABLE_BYTE_WATCHDOG", "value": "0" }
+  ]
+}
+```
+
+Reload the window, open the Claude Code panel, and run `/status`: `Anthropic base URL` should show `http://127.0.0.1:8000` and the credential should be `ANTHROPIC_AUTH_TOKEN`. With discovery enabled, switch aliases from `/model`.
+
+- Put these in **user settings**, not a committed workspace settings file. The extension checks credentials from `claudeCode.environmentVariables` before launching; `~/.claude/settings.json` reaches the spawned process but not that login check.
+- Use the same token the gateway was started with. If `scripts/relay-claude` generated a random session token because none was configured, that token is not valid for a gateway started separately.
+- Third-party-provider mode has no plan usage bars, voice dictation, or cloud sessions/Remote Control.
+- If you prefer the CLI inside VS Code's integrated terminal, use `scripts/relay-claude` instead; it sets the same variables for that shell.
+
+### Model aliases
+
+| Alias | Default backend |
+|-------|-----------------|
+| `claude-fable-5-2` | `kilogateway/baidu/ernie-5.5-flash-preview:free` |
+| `claude-opus-5-5` | `kilogateway/nvidia/nemotron-3-ultra-550b-a55b:free` |
+| `claude-sonnet-5-5` | `kilogateway/nvidia/nemotron-3.5-super-vl:free` |
+| `claude-haiku-5-5` | `kilogateway/nvidia/nemotron-3.5-lightning:free` |
+
+Override the mapping in `settings.json` under `claude.model_map`. Values are `provider/model` pairs; only tool-capable providers are considered when the request includes tools. These defaults use Kilo Gateway's keyless free endpoints because its NVIDIA-hosted models are typically faster than the direct NVIDIA equivalents. Claude Code sends large system prompts and tool schemas, so prefer backends without a tight per-minute input-token cap.
+
+### Behaviour & limitations
+
+- The adapter forces `X-Use-ServerSide-System-Prompt: false` internally, so Claude's own system prompt and tool-result history are forwarded verbatim. The separate [`/v1/agents/run`](#post-v1agentsrun) Map–Reduce API is unaffected.
+- Streaming produces standard Anthropic SSE events; streamed tool arguments are buffered per `tool_use` block before emission.
+- Thinking/reasoning from backend models is emitted as plain text, not signed Anthropic `thinking` blocks.
+- Tool loops work only with providers that have native tool passthrough: **Groq, Requesty, Kilo Gateway, DreamPrompting, Inferbase, and Routeway** are enabled by default; Cerebras, DeepSeek, Cloudflare, Ollama, SambaNova, and NVIDIA can be enabled as additional providers. NVIDIA needs no card but is disabled by default because its models were unstable in testing; free-tier tool-calling reliability varies by model — test a chosen alias before long agent runs.
+- Token counts are estimates, not provider-reported usage.
 
 ---
 
@@ -30,289 +271,207 @@ No code changes. No retry logic. No 429 errors breaking your app.
 
 | Feature | Why It Matters |
 |---------|----------------|
-| **OpenAI-compatible** | Drop-in for your existing code. LangChain, LlamaIndex, any SDK. |
-| **Automatic Failover** | Provider down? One model hit limits? We try the next one automatically. Zero downtime. |
-| **Session Affinity** | Pin conversations to a provider via `X-Session-ID` for context caching benefits. |
-| **4-Mode Context Management** | Static, Dynamic, Reservoir, Adaptive — with extractive summarization to preserve long conversations. |
-| **Consistent Output Style** | Universal style guidance + response normalizers eliminate provider-specific quirks. Opt out per-request via `X-Use-ServerSide-System-Prompt: false`. |
-| **Intent-Based Routing** | `model_type=coding`, `model_scale=large`, `model_name=deepseek` — tell us what you need, not which API to call. |
-| **[NEW] Image-aware Routing** | Upload images in chat; the dispatcher automatically routes to vision-capable models. Explicit text-only model pick? Falls back within the same provider, then any provider. |
-| **Real-time Streaming** | Full SSE streaming from every backend provider. |
-| **Chat UI** | Built-in web chat interface at [`/chat`](http://localhost:8000/chat) — streaming, conversation history, dark/light mode, Browser or Server storage. |
-| **Local + Cloud** | Mix your private Ollama instance with cloud free tiers seamlessly. |
-| **Admin Dashboard** | Visual editor for provider limits and real-time usage monitoring at [`/admin`](http://localhost:8000/admin) — no manual JSON editing or server restarts. |
+| **OpenAI-compatible** | Drop-in for existing code: LangChain, LlamaIndex, any SDK. |
+| **Anthropic-compatible** | `POST /v1/messages` and `POST /v1/messages/count_tokens` for Claude Code and other Anthropic clients. |
+| **Agent tool calling** | OpenAI-style `tools`/`tool_choice` and Anthropic `tool_use`/`tool_result` blocks, with native passthrough on supported providers. |
+| **Automatic failover** | Provider down or a model rate-limited? The next available model is tried automatically. |
+| **Session affinity** | Pin conversations to a provider via `X-Session-ID` for context-caching benefits; sessions migrate if that provider fails. |
+| **Context management** | Static, Dynamic, Reservoir, and Adaptive modes, with extractive summarization for long conversations. |
+| **Consistent output style** | Universal style guidance plus response normalizers; opt out per request for agent frameworks. |
+| **Intent-based routing** | `model_type=coding`, `model_scale=large`, `model_name=gemma` — say what you need, not which API to call. |
+| **Image-aware routing** | Messages with image content are routed only to vision-capable models. |
+| **Real-time streaming** | Full SSE streaming from every backend provider. |
+| **Local + cloud** | Mix a local Ollama instance with cloud free tiers. |
+| **Web UIs** | Chat interface at [`/chat`](http://localhost:8000/chat) and admin dashboard at [`/admin`](http://localhost:8000/admin). |
+| **Local-first security** | Binds to `127.0.0.1`, restricts CORS to localhost origins, and supports an optional bearer token. |
+| **Honest errors & usage** | Real HTTP statuses, structured error envelopes, and token estimates on responses and the final SSE chunk. |
 
----
-
-## Who It's For
-
-| User | Use Case |
-|------|----------|
-| **Independent developers** | Ship AI features without a $$$/month API bill |
-| **Students & hobbyists** | GPT-level AI, no credit card or phone number required |
-| **Self-hosters** | Combine Ollama privacy with cloud capacity |
-| **Researchers** | Batch queries across providers for higher throughput |
-
-**Community:** 120+ GitHub stars, 10+ forks, 20+ models from 6 providers included. Active development — 70+ commits in 12 weeks.
-
----
-
-## Quick Start
-
-### 1. Install
-```bash
-git clone https://github.com/msmarkgu/RelayFreeLLM.git && cd RelayFreeLLM
-pip install -r requirements.txt
-```
-
-### 2. Add free API keys
-Create a `.env` file in the project root folder:
-```bash
-GEMINI_APIKEY=      # ai.google.dev
-GROQ_APIKEY=        # console.groq.com
-MISTRAL_APIKEY=     # console.mistral.ai
-NVIDIA_APIKEY=      # build.nvidia.com
-SAMBANOVA_APIKEY=   # cloud.sambanova.ai
-```
-
-### 3. Verify connectivity (optional but recommended)
-```bash
-python -m tests.test_models_availability
-```
-
-<details>
-<summary>Click to see expected output (20/20 models available)</summary>
-
-```
-======================================================================
-MODEL AVAILABILITY SUMMARY
-======================================================================
-✅ PASS | Cerebras        | zai-glm-4.7                                   | Success
-✅ PASS | Cerebras        | gpt-oss-120b                                  | Success
-✅ PASS | Cerebras        | gemma-4-31b                                   | Success
-✅ PASS | Groq            | llama-3.3-70b-versatile                       | Success
-✅ PASS | Groq            | qwen/qwen3.6-27b                              | Success
-✅ PASS | Groq            | openai/gpt-oss-120b                           | Success
-✅ PASS | Groq            | openai/gpt-oss-20b                            | Success
-✅ PASS | Groq            | openai/gpt-oss-safeguard-20b                  | Success
-✅ PASS | Groq            | groq/compound                                 | Success
-✅ PASS | Mistral         | mistral-large-latest                          | Success
-✅ PASS | Mistral         | mistral-medium-latest                         | Success
-✅ PASS | Mistral         | codestral-latest                              | Success
-✅ PASS | Mistral         | mistral-large-2512                            | Success
-✅ PASS | Mistral         | mistral-medium-2508                           | Success
-✅ PASS | Mistral         | mistral-medium-2505                           | Success
-✅ PASS | Mistral         | mistral-medium                                | Success
-✅ PASS | Mistral         | codestral-2508                                | Success
-✅ PASS | Gemini          | gemini-2.5-flash                              | Success
-✅ PASS | Nvidia          | minimaxai/minimax-m3                          | Success
-✅ PASS | Nvidia          | stepfun-ai/step-3.7-flash                     | Success
-======================================================================
-TOTAL: 20/20 models available.
-======================================================================
-```
-
-</details>
-
-### 4. Start the server
-```bash
-python -m src.server
-```
-
-### 4.1 Run with Docker
-Build and run the minimal Docker image from the project root:
-```bash
-docker build -t relayfreellm .
-```
-
-Run the container with your `.env` file mounted so API keys and provider config are available:
-```bash
-docker run --rm --env-file .env -p 8000:8000 relayfreellm
-```
-
-### 5. Open the Admin Dashboard
-Once the server is running, open [`http://localhost:8000/admin`](http://localhost:8000/admin) in your browser to manage rate limits, add/remove models, and monitor usage in real time.
-
-### 6. Open the Chat Interface
-Open [`http://localhost:8000/chat`](http://localhost:8000/chat) to start chatting — streaming responses, persistent conversation history, dark/light mode, and direct access to all providers.
-
-### 7. Use it
-```python
-from openai import OpenAI
-
-client = OpenAI(base_url="http://localhost:8000/v1", api_key="relay-free")
-response = client.chat.completions.create(
-    model="meta-model",
-    messages=[{"role": "user", "content": "Hello!"}]
-)
-```
-
-Or route to a specific provider:
-```python
-response = client.chat.completions.create(
-    model="groq/llama-3.3-70b-versatile",
-    messages=[{"role": "user", "content": "Hello!"}]
-)
-```
-
----
-
-## Admin Dashboard
-
-Manage everything from your browser. The admin dashboard at [`http://localhost:8000/admin`](http://localhost:8000/admin) provides a visual interface for managing provider model limits and viewing real-time usage statistics — no need to edit JSON files by hand or restart the server.
-
-### Limits Tab
-
-- **Providers** are displayed as collapsible cards, each showing its models in an editable table.
-- **Edit any field inline**: model name, type (text/coding/image/etc.), scale (large/medium/small), max context length, and all 7 rate-limit values (requests/tokens per second/minute/hour/day).
-- **Add/remove** models per provider, or add/remove entire providers.
-- **Save** writes your changes to `provider_model_limits.json` and hot-reloads the rate-limit tracker — no server restart required.
-
-### Usage Tab
-
-- **Summary cards** show total requests, prompt tokens, completion tokens, and total tokens across all providers.
-- **Per-provider breakdown** tables list each model's individual usage.
-- **Reset Stats** zeros out all counters in `usage_stats.json` with a confirmation prompt.
-- Data auto-refreshes every 30 seconds.
-
-All data is stored in JSON files — no database required.
-
----
-
-## Chat Interface
-
-A full-featured web chat UI ships with the server at [`/chat`](http://localhost:8000/chat).
-
-### Features
-
-- **Streaming responses** — real-time token-by-token output
-- **Provider attribution** — see which provider/model handled each response
-- **Conversation history** — persist chats in your browser (`localStorage`) or on the server (opt-in)
-- **Conversation management** — sidebar with search, rename, copy, delete
-- **Edit & delete messages** — fix typos or prune unwanted branches mid-conversation
-- **Image upload** — file picker, paste, drag-and-drop; images rendered inline in message bubbles (click to expand)
-- **Intent-based routing** — switch models via the dropdown (`meta-model` or specific `Provider/Model`)
-- **Dark/light mode** — toggle in the header, preference saved
-
-### Storage
-
-By default, conversations are saved to your browser's `localStorage`. Switch to **Server** storage via the header dropdown to persist conversations to `conversations.json` on disk — survives browser resets and is accessible across devices sharing the same device ID.
-
----
-
-## See It In Action
-
-![RelayFreeLLM Demo](https://raw.githubusercontent.com/msmarkgu/RelayFreeLLM/main/relayfreellm-demo.gif)
+Useful for independent developers and students avoiding API bills, self-hosters combining Ollama privacy with cloud capacity, researchers batching queries across providers, and coding-agent users running Claude Code on free tiers.
 
 ---
 
 ## How Routing Works
 
-### Intent-Based Selection
-```json
-{"model": "meta-model"}                              // Any provider, picks the next available
-{"model": "meta-model", "model_type": "coding"}      // Any coding model
-{"model": "meta-model", "model_scale": "large"}       // Only large models
-{"model": "meta-model", "model_name": "deepseek"}     // Prefer DeepSeek models
-{"model": "Gemini/gemini-2.5-flash"}                  // Specific provider/model
+### Intent-based selection
+
+```text
+{"model": "meta-model"}                         // Any provider, picks the next available
+{"model": "meta-model", "model_type": "coding"} // Any coding model
+{"model": "meta-model", "model_scale": "large"} // Only large models
+{"model": "meta-model", "model_name": "gemma"}  // Prefer Gemma models
+{"model": "Gemini/gemini-2.5-flash"}            // Specific provider/model
 ```
 
-### Automatic Failover
+### Automatic failover
+
 ```
 Request → Groq (rate limited)
         → Circuit breaker activates (60s cooldown)
         → Retry → Gemini
-        → Retry → Mistral
+        → Retry → Routeway
         → Success ✓
 ```
 
-### Image-Aware Routing
+### Image-aware routing
 
-When a user message contains `image_url` content parts (as defined by the OpenAI Chat Completions spec), the dispatcher automatically restricts model selection to vision-capable models:
+When a message contains `image_url` content parts (OpenAI Chat Completions format), the dispatcher restricts model selection to vision-capable models:
 
-- **Meta-model routing** — only models with `modality: "vision"` in the registry are considered during provider/model selection.
-- **Specific routing** — if the user explicitly requests a text-only model (e.g. `nvidia/minimaxai/minimax-m2.7`), the dispatcher first searches for a vision model within the same provider (e.g. `nvidia/moonshotai/kimi-k2.6`), then falls back to any provider's vision model. If none are available, a clear error is returned.
+- **Meta-model routing** — only models with `modality: "vision"` in the registry are considered.
+- **Specific routing** — if a text-only model is requested, the dispatcher first looks for a vision model in the same provider, then falls back to any provider's vision model. If none are available, a clear error is returned.
 
-This behavior is driven by the per-model `modality` field in `provider_model_limits.json`. Models without image support remain available for text-only requests.
+This is driven by the per-model `modality` field in `provider_model_limits.json`. Models without image support remain available for text-only requests.
 
-### Consistent Output Style
-Despite switching between providers, every response is homogenized:
-- **Style directive injection** — universal guide added to every system prompt
-- **Response normalization** — strips "As an AI...", "Certainly!", fixes JSON, standardizes markdown
+### Tool calling
 
-The standard system prompt injection can be disabled per-request by sending the header `X-Use-ServerSide-System-Prompt: false`. See [Agent Framework Support](#agent-framework-support) below.
+Send OpenAI-style tool definitions; tool requests are routed only to clients with native tool passthrough, and `tool_use`/`tool_result` pairs are kept intact instead of being summarised by the context manager.
 
----
+```python
+tools = [{
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "parameters": {"type": "object", "properties": {"city": {"type": "string"}}},
+    },
+}]
+response = client.chat.completions.create(model="meta-model", messages=[...], tools=tools)
+call = response.choices[0].message.tool_calls[0]  # run it, append a role="tool" result, call again
+```
 
-## Advanced Features
+Streaming tool calls emit `delta.tool_calls` fragments plus a final chunk with `finish_reason: "tool_calls"`. Native tool passthrough is available on **Groq, Requesty, Kilo Gateway, DreamPrompting, Inferbase, and Routeway** out of the box; the Cerebras, DeepSeek, Cloudflare, Ollama, SambaNova, and NVIDIA clients can be enabled as additional providers; NVIDIA is free but unstable and disabled by default. Gemini and Mistral are used for text only.
 
-### Session Affinity
-Pass `X-Session-ID: user-123` and the gateway pins that user to a single provider. If that provider fails, the session automatically migrates.
+### Consistent output style & agent frameworks
 
-### Agent Framework Support
-Agent frameworks (LangChain, AutoGen, CrewAI) manage their own system prompt and conversation history. To prevent the gateway from injecting its standard prompt or reconstructing the message array, send the header:
+By default the gateway injects a universal style directive into the system prompt and normalizes responses (strips "As an AI...", fixes JSON, standardizes markdown). Agent frameworks such as LangChain, AutoGen, and CrewAI manage their own prompts and message order; disable injection with:
 
 ```
 X-Use-ServerSide-System-Prompt: false
 ```
 
-Behaviour when `false` (either per-request header or server `settings.json` default):
+When disabled (per request, or server-wide via `settings.json`):
 
-- The client's `messages` array is forwarded verbatim, preserving message order and roles (including `tool` and `function` roles in the future).
-- No server-side `STANDARD_SYSTEM_PROMPT` or style directive is injected.
-- The client's own system message (if any) is used without augmentation.
-- If the client sent no system message, no system message is sent to the provider.
+- `messages` is forwarded verbatim, preserving order and roles (including `assistant` tool calls and `tool` results).
+- No server-side system prompt or style directive is added; the client's own system message is used as-is.
+- If the client sent no system message, none is sent upstream.
 
-Set the server-wide default in `settings.json`:
 ```json
 {
-  "routing": {
-    "use_server_side_system_prompt": false
-  }
+  "routing": { "use_server_side_system_prompt": false },
+  "context": { "management_mode": "static" }
 }
 ```
 
-> **Note:** For full client-order fidelity, pair this with `CONTEXT_MANAGEMENT_MODE=static` in `settings.json` — modes like `reservoir` and `adaptive` may still reorder or summarise context when the conversation exceeds the token budget.
+For full client-order fidelity, use `static` context management; `reservoir` and `adaptive` may still reorder or summarise long conversations. The same setting can be supplied as `CONTEXT_MANAGEMENT_MODE=static` in the environment.
 
-### Multi-Turn Context Management
+### Multi-turn context management
+
 | Mode | Behavior |
 |------|----------|
 | **Static** | Keeps the last N messages verbatim. |
-| **Dynamic** | Adjusts context window based on real-time token usage. |
+| **Dynamic** | Adjusts the context window based on real-time token usage. |
 | **Reservoir** | Recent messages verbatim + extractive summary of older history. |
 | **Adaptive** | Detects coding vs chat conversations and switches strategy. |
 
-The Reservoir mode uses a **TF-scoring algorithm** to identify the most informative sentences, applies position bias for topicality, and greedily selects segments to fit your token budget — no LLM calls needed.
+Reservoir mode uses a TF-scoring algorithm to pick the most informative sentences, applies position bias for topicality, and greedily fits segments into the token budget — no extra LLM calls.
+
+### Errors & usage
+
+Failures return meaningful HTTP statuses (400/401/429/500/502) with an OpenAI-style envelope:
+
+```json
+{"error": {"message": "All retries failed...", "type": "upstream_error"}}
+```
+
+Streaming failures emit a final `data: {"error": {...}}` event instead of a fake `finish_reason: "error"`. Successful streams end with a usage chunk:
+
+```json
+{"usage": {"prompt_tokens": 12, "completion_tokens": 34, "total_tokens": 46}}
+```
+
+Token counts are estimated locally (not provider-reported), but are always non-zero so harness context budgeting works.
+
+---
+
+## Web UIs
+
+### Admin Dashboard
+
+At [`/admin`](http://localhost:8000/admin): visually edit provider limits and monitor usage — no JSON editing or server restarts.
+
+- **Limits tab** — collapsible provider cards with inline editing of model name, type, scale, context length, and all seven rate-limit values; add/remove models or providers. Saving hot-reloads the rate-limit tracker.
+- **Usage tab** — summary cards plus per-provider/per-model breakdowns, a reset action with confirmation, and 30-second auto-refresh.
+
+All data lives in JSON files — no database. See [Configuration](#configuration).
+
+### Chat Interface
+
+At [`/chat`](http://localhost:8000/chat): streaming chat with provider attribution, browser or server conversation history, search/rename/copy/delete, message editing, image upload (picker, paste, drag-and-drop), model dropdown, and dark/light mode.
+
+Conversations default to browser `localStorage`. Switch to **Server** storage in the header dropdown to persist them to `conversations.json` on disk.
 
 ---
 
 ## API Reference
 
+All API and admin routes accept `Authorization: Bearer $RELAY_AUTH_TOKEN` when `RELAY_AUTH_TOKEN` is set. `/` and `/health` remain public.
+
 ### `POST /v1/chat/completions`
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `model` | string | `"meta-model"` for auto-routing, or `"provider/model"` for direct |
-| `messages` | array | Standard OpenAI message format. `content` accepts `str` or `list[{type, text, ...}]` for multi-modal messages. |
+| `model` | string | `"meta-model"` for auto-routing, or `"provider/model"` for direct routing |
+| `messages` | array | OpenAI message format; `content` accepts a string or content parts for multi-modal input |
 | `stream` | bool | Enable SSE streaming |
 | `model_type` | string | Filter: `text`, `coding`, `image`, `speech`, `embedding`, `moderation`, `ocr` |
 | `model_scale` | string | Filter: `large`, `medium`, `small` |
-| `model_name` | string | Match model name substring |
+| `model_name` | string | Match a model-name substring |
+| `tools` | array | OpenAI-style function definitions; restricts routing to tool-capable clients |
+| `tool_choice` | string or object | `"auto"`, `"required"`, or `{"type": "function", "function": {"name": "..."}}` |
+
+Image content parts follow the OpenAI spec (`{"type": "image_url", "image_url": {"url": "..."}}`); see [Image-aware routing](#image-aware-routing). Text parts are flattened for providers that do not support structured content.
+
+### `POST /v1/messages` (Anthropic)
+
+Accepts the Anthropic Messages request shape: `model`, `max_tokens`, `messages` with `text`/`image`/`tool_use`/`tool_result`/`thinking` blocks, optional `system`, `tools`, `tool_choice`, `temperature`, and `stream`. Returns an Anthropic message object or Anthropic SSE events (`message_start`, `content_block_start`, `content_block_delta`, `content_block_stop`, `message_delta`, `message_stop`, `error`). Errors use the Anthropic envelope `{"type": "error", "error": {"type": "...", "message": "..."}}`.
+
+```python
+import anthropic
+
+client = anthropic.Anthropic(
+    base_url="http://localhost:8000",
+    api_key="relay-free",  # or RELAY_AUTH_TOKEN
+)
+message = client.messages.create(
+    model="claude-sonnet-5-5",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+```
+
+### `POST /v1/messages/count_tokens`
+
+Estimates input tokens for an Anthropic Messages request and returns `{"input_tokens": N}`.
 
 ### `GET /v1/models`
+
 ```bash
 curl http://localhost:8000/v1/models?type=coding&scale=large
 ```
 
-> **Multi-modal content:** The `content` field in each message accepts either a plain string or a list of content parts (e.g. `[{"type": "text", "text": "..."}, {"type": "image_url", "url": "..."}]`), matching the OpenAI Chat Completions spec. When image parts are present, the dispatcher automatically routes to vision-capable models only (see [Image-Aware Routing](#image-aware-routing)). Text parts are flattened before being sent to providers that don't support structured content.
->
-> **Agent frameworks:** To send the client's `messages` array verbatim without server-side system prompt injection, set `X-Use-ServerSide-System-Prompt: false`. See [Agent Framework Support](#agent-framework-support).
+Requests carrying an `anthropic-version` header receive Claude tier aliases instead of the raw provider catalog.
 
 ### `GET /v1/usage`
+
 ```bash
 curl http://localhost:8000/v1/usage
 ```
 
-### Admin Endpoints
+### `POST /v1/agents/run`
+
+Map–Reduce orchestration: a planner LLM decomposes `task` into subtasks, each runs on a different model in parallel, and a synthesizer produces `final_answer`.
+
+Fields: `task` (required), `use_case` (`research`/`code`/`qa`/`general`, default `general`), `num_experts` (1–8, default `4`), `stream`, `max_tokens_per_subtask` (default `1500`), and `max_tokens_synthesis` (default `3000`). The response includes `task`, `subtasks` with per-subtask attribution, `final_answer`, and `meta` (planner/synthesizer attribution, latency, success/failure counts). Tune defaults under `agents` in `settings.json`.
+
+### Admin endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -324,106 +483,40 @@ curl http://localhost:8000/v1/usage
 
 ---
 
-## Tutorial: Build a Free AI CLI
+## Configuration
 
-**`chat.py`** — A terminal chatbot that uses RelayFreeLLM with session persistence:
-```python
-from openai import OpenAI
-import readline
+### Provider model limits
 
-client = OpenAI(base_url="http://localhost:8000/v1", api_key="relay-free")
-history = []
-
-while True:
-    user = input("\n> ")
-    history.append({"role": "user", "content": user})
-    r = client.chat.completions.create(model="meta-model", messages=history)
-    reply = r.choices[0].message.content
-    print(reply)
-    history.append({"role": "assistant", "content": reply})
-```
-
-Run it. No API bill. No rate limits. That's the point.
-
-**`vision.py`** — Send an image; the dispatcher automatically routes to a vision-capable model:
-```python
-import base64
-from openai import OpenAI
-
-client = OpenAI(base_url="http://localhost:8000/v1", api_key="relay-free")
-
-with open("photo.jpg", "rb") as f:
-    b64 = base64.b64encode(f.read()).decode("utf-8")
-
-response = client.chat.completions.create(
-    model="meta-model",
-    messages=[{
-        "role": "user",
-        "content": [
-            {"type": "text", "text": "What's in this image?"},
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
-        ]
-    }]
-)
-print(response.choices[0].message.content)
-```
-
-Run both. No API bill. No rate limits.
-
----
-
-## Provider Model Limits (Optional)
-
-Default rate limits in [`provider_model_limits.json`](src/provider_model_limits.json) work for most use cases. If you hit provider caps, adjust the limits for your account tier — either by editing the file directly or using the **Admin Dashboard** (`http://localhost:8000/admin`):
+Defaults in [`src/provider_model_limits.json`](src/provider_model_limits.json) cover the enabled providers. Adjust them for your account tier by editing the file or using the [Admin Dashboard](#admin-dashboard). Each model declares its type, scale, context length, optional `modality`, and per-second/minute/hour/day request and token limits; `-1` means unlimited.
 
 <details>
-<summary>Click to see example with all fields</summary>
+<summary>Example registry entry</summary>
 
 ```json
 {
-  "providers": [
-    {
-      "name": "Groq",
-      "models": [
-        {
-          "name": "llama-3.3-70b-versatile",
-          "type": "text",
-          "scale": "large",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 30,
-            "requests_per_hour": 1800,
-            "requests_per_day": 1000,
-            "tokens_per_minute": 12000,
-            "tokens_per_hour": 30000,
-            "tokens_per_day": 100000
-          },
-          "Max_Context_Length": 131000,
-          "modality": "text"
-        },
-        {
-          "name": "meta-llama/llama-4-scout-17b-16e-instruct",
-          "type": "text",
-          "scale": "large",
-          "limits": {
-            "requests_per_second": 1,
-            "requests_per_minute": 30,
-            "requests_per_hour": 1800,
-            "requests_per_day": 1000,
-            "tokens_per_minute": 12000,
-            "tokens_per_hour": 30000,
-            "tokens_per_day": 100000
-          },
-          "Max_Context_Length": 128000,
-          "modality": "vision"
-        }
-      ]
-    }
-  ]
+  "providers": [{
+    "name": "Groq",
+    "enabled": true,
+    "models": [{
+      "name": "qwen/qwen3.8-27b",
+      "type": "text",
+      "scale": "large",
+      "Max_Context_Length": 131000,
+      "limits": {
+        "requests_per_second": 1,
+        "requests_per_minute": 30,
+        "tokens_per_minute": 8000
+      }
+    }]
+  }]
 }
 ```
 
 </details>
+
+### settings.json
+
+[`settings.json`](settings.json) controls runtime behaviour: `session` (affinity TTL and capacity), `context` (management mode and budgets), `summarization`, `routing` (global provider lock and system-prompt injection), `http` timeout, `claude.model_map` (tier aliases), and `agents` (orchestration defaults). Most values can also be set via environment variables; see the comments in the file.
 
 ---
 
@@ -432,28 +525,22 @@ Default rate limits in [`provider_model_limits.json`](src/provider_model_limits.
 <details>
 <summary>Click to expand</summary>
 
-```
-        ┌─────────────────────────────────────────────────┐
-        │                 Your Application                │
-        └─────────────────────┬───────────────────────────┘
-                              │ OpenAI-compatible API
-        ┌─────────────────────▼───────────────────────────┐
-        │              RelayFreeLLM Gateway               │
-        │  ┌───────────┐    ┌───────────┐    ┌──────────┐ │
-        │  │  Router   │───▶│Dispatcher │───▶│ContextMgr│ │
-        │  │ /v1/chat  │    │ (Retries) │    │(Summary) │ │
-        │  └───────────┘    └─────┬─────┘    └──────────┘ │
-        │                         │          ┌──────────┐ │
-        │                         └─────────▶│Affinity  │ │
-        │                                    │  Map     │ │
-        │                                    └──────────┘ │
-        └─────────────────────────┬───────────────────────┘
-                                  │
-      ┌──────────┬──────────┬─────┴────┬──────────┬──────────┬──────────┐
-      ▼          ▼          ▼          ▼          ▼          ▼          ▼
- ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
- │ Gemini │ │  Groq  │ │ Mistral│ │Cerebras│ │DeepSeek│ │ Ollama │ │ NVIDIA │
- └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ └────────┘
+```mermaid
+flowchart TD
+    A[Your application / Claude Code] -->|OpenAI or Anthropic API| B
+    subgraph B[RelayFreeLLM Gateway]
+        C[Router] --> D[Dispatcher + retries]
+        D --> E[Context manager]
+        D --> F[Session affinity]
+    end
+    B --> G[Groq]
+    B --> H[Gemini]
+    B --> K[Requesty]
+    B --> L[Kilo Gateway]
+    B --> M[DreamPrompting]
+    B --> N[Inferbase]
+    B --> O[Routeway]
+    B -. optional clients .-> J[Mistral · Cerebras · DeepSeek<br/>Cloudflare · Ollama · SambaNova · NVIDIA (free, unstable)]
 ```
 
 </details>
@@ -463,9 +550,15 @@ Default rate limits in [`provider_model_limits.json`](src/provider_model_limits.
 ## Roadmap
 
 - [x] Web dashboard for live provider status
+- [x] Image upload routing (vision models)
+- [x] Anthropic Messages API + Claude Code CLI and VS Code extension
+- [x] Native tool calling with capability-aware routing
+- [x] Optional bearer auth, loopback bind, localhost-only CORS
+- [x] HTTP error envelopes and streaming usage chunks
 - [ ] Persistent rate limit state (survives restarts)
 - [ ] Prompt caching layer
-- [x] Image upload routing (vision models)
+- [ ] Signed Anthropic thinking blocks
+- [ ] Gemini/Mistral native tool passthrough
 - [ ] Embeddings & image generation routing
 - [ ] One-command Docker deploy
 
@@ -480,9 +573,8 @@ Found a new free provider? Adding one takes ~50 lines:
 class MyProviderClient(ApiInterface):
     PROVIDER_NAME = "myprovider"
 
-    async def call_model_api(self, request, stream):
-        # Your API logic here
-        pass
+    async def call_model_api(self, request, stream):  # your API logic here
+        ...
 ```
 
 PRs welcome.
@@ -493,7 +585,7 @@ PRs welcome.
 
 Built with [FastAPI](https://fastapi.tiangolo.com/), [Pydantic](https://docs.pydantic.dev/), [httpx](https://www.python-httpx.org/), and AI coding tools.
 
-Powered by the generous free tiers of [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), [Mistral AI](https://mistral.ai/), [Cerebras](https://cerebras.ai/), [NVIDIA](https://build.nvidia.com/), [DeepSeek](https://deepseek.com/), [Cloudflare](https://cloudflare.com/), and [Ollama](https://ollama.com/).
+Powered by the free tiers of [Google Gemini](https://ai.google.dev/), [Groq](https://groq.com/), [Requesty](https://requesty.ai/), [Kilo Gateway](https://kilo.ai/docs/gateway), [DreamPrompting](https://dreamprompting.com/api-docs), [Inferbase](https://inferbase.ai/docs/api), and [Routeway](https://docs.routeway.ai) by default, with client support for [Mistral AI](https://mistral.ai/), [Cerebras](https://cerebras.ai/), [DeepSeek](https://deepseek.com/), [Cloudflare](https://cloudflare.com/), [Ollama](https://ollama.com/), SambaNova, and [NVIDIA](https://build.nvidia.com/) (free but unstable, disabled by default).
 
 ---
 

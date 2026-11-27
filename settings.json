@@ -57,5 +57,28 @@
   "http": {
     "timeout_seconds": 60,
     "__timeout_seconds_comment": "HTTP request timeout in seconds"
+  },
+
+  "claude": {
+    "__model_map_comment": "Claude Code tier aliases mapped to provider/model pairs. Defaults use keyless Kilo Gateway free endpoints; only tool-capable providers should be used here.",
+    "model_map": {
+      "claude-fable-5-2": "kilogateway/baidu/ernie-5.5-flash-preview:free",
+      "claude-opus-5-5": "kilogateway/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "claude-sonnet-5-5": "kilogateway/nvidia/nemotron-3.5-super-vl:free",
+      "claude-haiku-5-5": "kilogateway/nvidia/nemotron-3.5-lightning:free"
+    }
+  },
+
+  "agents": {
+    "__max_parallel_experts_comment": "Default number of expert subtasks to run in parallel (capped by max_experts_absolute)",
+    "max_parallel_experts": 4,
+    "max_experts_absolute": 8,
+    "continue_on_subtask_error": true,
+    "planner_model_type": "large",
+    "planner_model_scale": null,
+    "synthesizer_model_type": "large",
+    "synthesizer_model_scale": null,
+    "max_tokens_per_subtask": 1500,
+    "max_tokens_synthesis": 3000
   }
 }

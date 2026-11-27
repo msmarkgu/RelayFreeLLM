@@ -12,6 +12,40 @@ from typing import Any, Literal, Optional, Union
 from pydantic import BaseModel, Field
 
 
+# ── Tool Calling Models ─────────────────────────────────────────────
+
+
+class FunctionCall(BaseModel):
+    """A function name plus JSON-encoded arguments."""
+
+    name: str
+    arguments: str = "{}"
+
+
+class ToolCall(BaseModel):
+    """An assistant request to execute a tool."""
+
+    id: str
+    type: Literal["function"] = "function"
+    function: FunctionCall
+
+
+class FunctionDefinition(BaseModel):
+    name: str
+    description: Optional[str] = None
+    parameters: dict[str, Any] = Field(default_factory=dict)
+
+
+class ToolDefinition(BaseModel):
+    """An OpenAI-style tool definition supplied by the client."""
+
+    type: Literal["function"] = "function"
+    function: FunctionDefinition
+
+
+ToolChoice = Union[str, dict[str, Any]]
+
+
 # ── Request Models ──────────────────────────────────────────────────
 
 
@@ -20,12 +54,15 @@ class ChatMessage(BaseModel):
 
     `content` follows the OpenAI Chat Completions spec: either a plain
     string, or a list of structured content parts (e.g. text + image_url).
-    Use `get_text()` to flatten to a plain string for downstream consumers
-    that don't yet handle structured content.
+    Tool loops additionally use `tool_calls` on assistant messages and
+    `tool_call_id` on tool-result messages. Use `get_text()` to flatten to
+    a plain string for downstream consumers.
     """
 
-    role: Literal["system", "user", "assistant"]
-    content: Union[str, list[Any]]
+    role: Literal["system", "user", "assistant", "tool"]
+    content: Optional[Union[str, list[Any]]] = None
+    tool_call_id: Optional[str] = None
+    tool_calls: Optional[list[ToolCall]] = None
 
     def get_text(self) -> str:
         """Extract plain text from content.
@@ -75,6 +112,8 @@ class ChatCompletionRequest(BaseModel):
     )
     model_scale: Optional[str] = None  # large, medium, small
     model_name: Optional[str] = None  # e.g., deepseek, llama
+    tools: Optional[list[ToolDefinition]] = None
+    tool_choice: Optional[ToolChoice] = None
 
     def get_system_prompt(self) -> str:
         """Extract the system prompt from messages, if any."""
@@ -107,7 +146,8 @@ class ChoiceMessage(BaseModel):
     """The message content within a choice."""
 
     role: str = "assistant"
-    content: str
+    content: Optional[str] = None
+    tool_calls: Optional[list[ToolCall]] = None
 
 
 class Choice(BaseModel):
@@ -126,6 +166,13 @@ class Usage(BaseModel):
     total_tokens: int = 0
 
 
+class ErrorDetail(BaseModel):
+    """OpenAI-style error payload carried on failed gateway responses."""
+
+    message: str
+    type: str = "server_error"
+
+
 class ChatCompletionResponse(BaseModel):
     """
     OpenAI-compatible chat completion response.
@@ -140,28 +187,95 @@ class ChatCompletionResponse(BaseModel):
     choices: list[Choice]
     usage: Optional[Usage] = None
     meta: MetaInfo  # extension: provider attribution
+    error: Optional[ErrorDetail] = None
+
+
+# ── Agent / Map-Reduce Request/Response ────────────────────────────────
+
+
+class AgentSubtaskSpec(BaseModel):
+    """A single subtask produced by the planner."""
+
+    id: int
+    description: str
+    model_type: str | None = None   # text, coding, etc. — hints for selection
+    model_scale: str | None = None  # large, medium, small
+    prompt: str                     # the actual task text sent to the expert
+
+
+class AgentSubtaskResult(BaseModel):
+    """Result of a single expert subtask."""
+
+    id: int
+    description: str
+    provider: str
+    model: str
+    result: str
+
+
+class AgentMetaInfo(BaseModel):
+    """Attribution and timing for an agent orchestration run."""
+
+    planner_provider: str | None = None
+    planner_model: str | None = None
+    synthesizer_provider: str | None = None
+    synthesizer_model: str | None = None
+    latency_ms: float = 0.0
+    subtasks_completed: int = 0
+    subtasks_failed: int = 0
+
+
+class AgentRunRequest(BaseModel):
+    """
+    Request payload for the /v1/agents/run endpoint.
+
+    The orchestrator decomposes *task* into subtasks using a planner LLM,
+    runs each subtask on a different model in parallel, and synthesizes the
+    results into *final_answer*.
+    """
+
+    task: str
+    use_case: Literal["research", "code", "qa", "general"] = "general"
+    num_experts: int = Field(default=4, ge=1, le=8)
+    stream: bool = False
+    max_tokens_per_subtask: int = 1500
+    max_tokens_synthesis: int = 3000
+
+
+class AgentRunResponse(BaseModel):
+    """
+    Response payload for the /v1/agents/run endpoint.
+
+    Includes the final synthesised answer and per-subtask attribution so
+    clients can inspect which provider/model handled each subtask.
+    """
+
+    task: str
+    subtasks: list[AgentSubtaskResult]
+    final_answer: str
+    meta: AgentMetaInfo
 
 
 # ── Helper Factories ────────────────────────────────────────────────
 
 
 def build_response(
-    content: str,
+    content: str | None,
     provider: str,
     model: str,
     latency_ms: float,
     attempt: int,
     prompt_tokens: int = 0,
     completion_tokens: int = 0,
+    tool_calls: Optional[list[ToolCall]] = None,
 ) -> ChatCompletionResponse:
     """Build a ChatCompletionResponse from raw values."""
-    if content is None:
-        content = ""
     return ChatCompletionResponse(
         model=model,
         choices=[
             Choice(
-                message=ChoiceMessage(content=content),
+                message=ChoiceMessage(content=content, tool_calls=tool_calls),
+                finish_reason="tool_calls" if tool_calls else "stop",
             )
         ],
         usage=Usage(
@@ -181,8 +295,13 @@ def build_response(
 def build_error_response(
     error_message: str,
     attempt: int,
+    error_type: str = "server_error",
 ) -> ChatCompletionResponse:
-    """Build an error response in the same OpenAI-compatible shape."""
+    """Build an error response carrying an OpenAI-style error payload.
+
+    ``choices``/``finish_reason`` are kept for backwards compatibility with
+    existing callers; the router converts ``error`` into an HTTP error status.
+    """
     return ChatCompletionResponse(
         model="none",
         choices=[
@@ -191,6 +310,7 @@ def build_error_response(
                 finish_reason="error",
             )
         ],
+        error=ErrorDetail(message=error_message, type=error_type),
         meta=MetaInfo(
             provider="none",
             model="none",

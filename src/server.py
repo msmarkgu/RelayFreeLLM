@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
+from .auth import BearerAuthMiddleware
 from .config import settings
 from .conversation_store import ConversationStore
 from .logging_util import ProjectLogger
@@ -22,7 +23,9 @@ from .model_selector import ModelSelector
 from .provider_registry import ProviderRegistry
 from .usage_tracker import UsageTracker
 from .router import api_router
+from .anthropic_router import anthropic_router
 from .admin import admin_router
+from .agents_router import agents_router
 
 # Configure logging early
 ProjectLogger.configure(
@@ -107,9 +110,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Optional token gate. Added before CORS so CORS remains outermost and can
+# answer browser preflight requests itself (the middleware also skips OPTIONS).
+app.add_middleware(BearerAuthMiddleware, token=settings.AUTH_TOKEN)
+
+# Browser clients are limited to loopback origins; wildcards would let any
+# web page drive a locally running gateway.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -117,7 +126,9 @@ app.add_middleware(
 
 # Register routes
 app.include_router(api_router)
+app.include_router(anthropic_router)
 app.include_router(admin_router)
+app.include_router(agents_router)
 
 
 if __name__ == "__main__":

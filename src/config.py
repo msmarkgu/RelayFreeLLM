@@ -34,14 +34,24 @@ class Settings:
         self.DEEPSEEK_APIKEY = ""
         self.NVIDIA_APIKEY = ""
         self.SAMBANOVA_APIKEY = ""
+        self.REQUESTY_APIKEY = ""
+        self.DREAMPROMPTING_APIKEY = ""
+        self.INFERBASE_APIKEY = ""
+        self.ROUTEWAY_APIKEY = ""
         self.CLOUDFLARE_API_TOKEN = ""
         self.CLOUDFLARE_ACCOUNT_ID = ""
         self.OLLAMA_BASE_URL = "http://localhost:11434"
 
         # Server
-        self.HOST = "0.0.0.0"
+        # Bind to loopback by default: RelayFreeLLM is a local gateway unless
+        # explicitly exposed (e.g. HOST=0.0.0.0 inside a container).
+        self.HOST = "127.0.0.1"
         self.PORT = 8000
         self.LOG_LEVEL = "INFO"
+        # Optional bearer token. When set, every API/admin request must send
+        # `Authorization: Bearer <token>`; health endpoints stay public so
+        # local launchers can poll readiness.
+        self.AUTH_TOKEN = ""
         self.SESSION_ID_HEADER = "X-Session-ID"
         self.USE_SERVER_SIDE_SYSTEM_PROMPT_HEADER = "X-Use-ServerSide-System-Prompt"
         self.SESSION_AFFINITY_ENABLED = True
@@ -52,6 +62,18 @@ class Settings:
         self.DEFAULT_TEMPERATURE = 0.8
         self.DEFAULT_MAX_TOKENS = 4000
         self.META_MODEL_NAME = "meta-model"
+
+        # Claude Code tier aliases -> concrete provider/model pairs.
+        # These defaults use Kilo Gateway's keyless free endpoints, which have
+        # been faster than the equivalent direct NVIDIA hosted models. They are
+        # tool-capable and enabled out of the box; override them in settings.json
+        # or the environment if you prefer another backend.
+        self.CLAUDE_MODEL_MAP = {
+            "claude-fable-5-2": "kilogateway/baidu/ernie-5.5-flash-preview:free",
+            "claude-opus-5-5": "kilogateway/nvidia/nemotron-3-ultra-550b-a55b:free",
+            "claude-sonnet-5-5": "kilogateway/nvidia/nemotron-3.5-super-vl:free",
+            "claude-haiku-5-5": "kilogateway/nvidia/nemotron-3.5-lightning:free",
+        }
 
         # Selection
         self.PROVIDER_STRATEGY = "roundrobin"
@@ -114,6 +136,51 @@ class Settings:
         self.HTTP_READ_TIMEOUT = 60.0
         self.HTTP_STREAM_TIMEOUT = 120.0
 
+        # Agent / Map-Reduce Orchestration
+        self.AGENTS_MAX_PARALLEL = 4
+        self.AGENTS_MAX_PARALLEL_ABSOLUTE = 8
+        self.AGENTS_CONTINUE_ON_SUBTASK_ERROR = True
+        self.AGENTS_PLANNER_MODEL_TYPE = "large"
+        self.AGENTS_PLANNER_MODEL_SCALE = None
+        self.AGENTS_SYNTHESIZER_MODEL_TYPE = "large"
+        self.AGENTS_SYNTHESIZER_MODEL_SCALE = None
+        self.AGENTS_MAX_TOKENS_PER_SUBTASK = 1500
+        self.AGENTS_MAX_TOKENS_SYNTHESIS = 3000
+        self.AGENTS_PLANNER_PROMPT = (
+            "You are a task decomposition planner.\n"
+            "Given a user task, split it into independent subtasks that can each be "
+            "answered by a different AI model.\n"
+            "Return a JSON array where each element has exactly these keys:\n"
+            "  \"id\"        : integer (1, 2, 3, ...)\n"
+            "  \"description\": short label for the subtask\n"
+            "  \"model_type\" : one of \"text\", \"coding\" (or null for any)\n"
+            "  \"model_scale\": one of \"large\", \"medium\", \"small\" (or null for any)\n"
+            "  \"prompt\"     : the full prompt to send to the expert model\n"
+            "Return ONLY the JSON array, no explanation."
+        )
+        self.AGENTS_EXPERT_PROMPTS = {
+            "research": (
+                "You are a research analyst. Answer the following subtask thoroughly "
+                "and accurately, citing key facts."
+            ),
+            "code": (
+                "You are a senior software engineer. Complete the following subtask "
+                "with correct, well-structured code."
+            ),
+            "qa": (
+                "You are a domain expert. Answer the following question directly "
+                "and concisely."
+            ),
+            "general": (
+                "You are a helpful assistant. Complete the following subtask."
+            ),
+        }
+        self.AGENTS_SYNTHESIZER_PROMPT = (
+            "You are a synthesizer. Combine the following expert analyses into a "
+            "single coherent answer to the original task. Preserve important details "
+            "and avoid repeating information."
+        )
+
     def _load_from_json(self):
         """Overlay settings from settings.json."""
         if not os.path.exists(self.SETTINGS_FILE):
@@ -138,7 +205,17 @@ class Settings:
                 "summarization.max_tokens": "SUMMARIZATION_MAX_TOKENS",
                 "routing.global_provider_lock": "GLOBAL_PROVIDER_LOCK",
                 "routing.use_server_side_system_prompt": "USE_SERVER_SIDE_SYSTEM_PROMPT",
+                "claude.model_map": "CLAUDE_MODEL_MAP",
                 "http.timeout_seconds": "REQUEST_TIMEOUT_SECONDS",
+                "agents.max_parallel_experts": "AGENTS_MAX_PARALLEL",
+                "agents.max_experts_absolute": "AGENTS_MAX_PARALLEL_ABSOLUTE",
+                "agents.continue_on_subtask_error": "AGENTS_CONTINUE_ON_SUBTASK_ERROR",
+                "agents.planner_model_type": "AGENTS_PLANNER_MODEL_TYPE",
+                "agents.planner_model_scale": "AGENTS_PLANNER_MODEL_SCALE",
+                "agents.synthesizer_model_type": "AGENTS_SYNTHESIZER_MODEL_TYPE",
+                "agents.synthesizer_model_scale": "AGENTS_SYNTHESIZER_MODEL_SCALE",
+                "agents.max_tokens_per_subtask": "AGENTS_MAX_TOKENS_PER_SUBTASK",
+                "agents.max_tokens_synthesis": "AGENTS_MAX_TOKENS_SYNTHESIS",
             }
 
             for json_path, attr_name in mappings.items():
@@ -166,11 +243,18 @@ class Settings:
         self.DEEPSEEK_APIKEY = os.getenv("DEEPSEEK_APIKEY", self.DEEPSEEK_APIKEY)
         self.NVIDIA_APIKEY = os.getenv("NVIDIA_APIKEY", self.NVIDIA_APIKEY)
         self.SAMBANOVA_APIKEY = os.getenv("SAMBANOVA_APIKEY", self.SAMBANOVA_APIKEY)
+        self.REQUESTY_APIKEY = os.getenv("REQUESTY_APIKEY", self.REQUESTY_APIKEY)
+        self.DREAMPROMPTING_APIKEY = os.getenv(
+            "DREAMPROMPTING_APIKEY", self.DREAMPROMPTING_APIKEY
+        )
+        self.INFERBASE_APIKEY = os.getenv("INFERBASE_APIKEY", self.INFERBASE_APIKEY)
+        self.ROUTEWAY_APIKEY = os.getenv("ROUTEWAY_APIKEY", self.ROUTEWAY_APIKEY)
         self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", self.OLLAMA_BASE_URL)
 
         # Server
         self.HOST = os.getenv("HOST", self.HOST)
         self.PORT = int(os.getenv("PORT", str(self.PORT)))
+        self.AUTH_TOKEN = os.getenv("RELAY_AUTH_TOKEN", self.AUTH_TOKEN)
         self.SESSION_AFFINITY_ENABLED = os.getenv("SESSION_AFFINITY_ENABLED", str(self.SESSION_AFFINITY_ENABLED)).lower() == "true"
         self.SESSION_TTL_HOURS = int(os.getenv("SESSION_TTL_HOURS", str(self.SESSION_TTL_HOURS)))
 

@@ -67,6 +67,8 @@ class GeminiClient(ApiInterface):
         temperature: float = 0.8,
         max_tokens: int = 4000,
         stream: bool = False,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> str | object:
 
         try:

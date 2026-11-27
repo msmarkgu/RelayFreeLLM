@@ -6,12 +6,19 @@ from ..config import settings
 from ..exceptions import ProviderError, RateLimitError, AuthenticationError
 from ..logging_util import ProjectLogger
 from .api_interface import ApiInterface
+from .tool_support import (
+    ToolResponse,
+    serialize_tools,
+    tool_call_deltas,
+    tool_calls_from_message,
+)
 
 
 class SambaNovaClient(ApiInterface):
 
     PROVIDER_NAME = "SambaNova"
     supports_multimodal = True
+    supports_tools = True
 
     BASE_URL = "https://api.sambanova.ai/v1"
 
@@ -51,6 +58,8 @@ class SambaNovaClient(ApiInterface):
         temperature: float = 0.7,
         max_tokens: int = 4000,
         stream: bool = False,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> str | object:
 
         headers = {
@@ -58,6 +67,7 @@ class SambaNovaClient(ApiInterface):
             "Content-Type": "application/json",
         }
 
+        tool_payload = serialize_tools(tools)
         payload = {
             "model": model,
             "messages": messages,
@@ -65,10 +75,14 @@ class SambaNovaClient(ApiInterface):
             "max_tokens": max_tokens,
             "stream": stream,
         }
+        if tool_payload:
+            payload["tools"] = tool_payload
+            if tool_choice is not None:
+                payload["tool_choice"] = tool_choice
 
         try:
             if stream:
-                return self._stream_response(payload, headers)
+                return self._stream_response(payload, headers, bool(tool_payload))
 
             async with httpx.AsyncClient(timeout=settings.HTTP_TIMEOUT) as client:
                 response = await client.post(
@@ -79,9 +93,13 @@ class SambaNovaClient(ApiInterface):
 
                 if response.status_code == 200:
                     data = response.json()
-                    content = data["choices"][0]["message"].get("content")
-                    if content is None:
-                        content = ""
+                    message = data["choices"][0]["message"]
+                    content = message.get("content") or ""
+                    if tool_payload:
+                        return ToolResponse(
+                            content=content,
+                            tool_calls=tool_calls_from_message(message),
+                        )
                     return content
                 elif response.status_code == 429:
                     raise RateLimitError("SambaNova", f"Rate limited: {response.text}")
@@ -95,7 +113,9 @@ class SambaNovaClient(ApiInterface):
         except Exception as e:
             raise ProviderError("SambaNova", str(e)) from e
 
-    async def _stream_response(self, payload: dict, headers: dict):
+    async def _stream_response(
+        self, payload: dict, headers: dict, with_tools: bool = False
+    ):
         client = httpx.AsyncClient(timeout=settings.HTTP_STREAM_TIMEOUT)
         try:
             async with client.stream(
@@ -127,6 +147,8 @@ class SambaNovaClient(ApiInterface):
                         content = delta.get("content", "")
                         if content:
                             yield content
+                        if with_tools and delta.get("tool_calls"):
+                            yield {"tool_calls": tool_call_deltas(delta)}
                     except (json.JSONDecodeError, KeyError, IndexError):
                         continue
         finally:

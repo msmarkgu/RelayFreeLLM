@@ -16,7 +16,7 @@ from starlette.responses import Response, JSONResponse
 from uuid import uuid4
 
 from .config import settings
-from .models import ChatCompletionRequest
+from .models import ChatCompletionRequest, ChatCompletionResponse, ErrorDetail
 from .logging_util import ProjectLogger
 
 CUR_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -29,6 +29,25 @@ api_router = APIRouter()
 ProjectLogger.configure(project_name="RelayFreeLLM", log_dir="logs", level=logging.INFO)
 
 logger = ProjectLogger.get_logger(__name__)
+
+# Gateway error types map to real HTTP statuses so client retry logic works.
+ERROR_STATUS_BY_TYPE = {
+    "invalid_request_error": 400,
+    "authentication_error": 401,
+    "rate_limit_error": 429,
+    "server_error": 500,
+    "upstream_error": 502,
+}
+
+
+def _error_response(
+    error: ErrorDetail, status_code: int | None = None
+) -> JSONResponse:
+    """Return an OpenAI-shaped error envelope with a meaningful HTTP status."""
+    return JSONResponse(
+        status_code=status_code or ERROR_STATUS_BY_TYPE.get(error.type, 500),
+        content={"error": {"message": error.message, "type": error.type}},
+    )
 
 
 # ── Dependency ──────────────────────────────────────────────────────
@@ -120,14 +139,22 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
         if len(chat_request.messages) > 1:
             conversation_history = chat_request.messages[:-1]
 
+        # Resolve once for both paths. A failure returned as a response object
+        # can then become a real HTTP error before SSE bytes are sent.
+        dispatch_result = await dispatcher.chat(
+            chat_request,
+            conversation_history=conversation_history,
+            session_id=session_id,
+            use_server_side_system_prompt=use_server_side_system_prompt,
+        )
+        if (
+            isinstance(dispatch_result, ChatCompletionResponse)
+            and dispatch_result.error
+        ):
+            return _error_response(dispatch_result.error)
+
         if not chat_request.stream:
-            result = await dispatcher.chat(
-                chat_request,
-                conversation_history=conversation_history,
-                session_id=session_id,
-                use_server_side_system_prompt=use_server_side_system_prompt,
-            )
-            return JSONResponse(content=result.model_dump(), status_code=200)
+            return JSONResponse(content=dispatch_result.model_dump(), status_code=200)
 
         # Handle Streaming
         async def stream_generator():
@@ -135,17 +162,13 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
             created = int(datetime.datetime.now().timestamp())
             actual_provider = chat_request.model
             actual_model = chat_request.model
+            generated: list[str] = []
+            saw_tool_calls = False
 
             try:
-                generator = await dispatcher.chat(
-                    chat_request,
-                    conversation_history=conversation_history,
-                    session_id=session_id,
-                    use_server_side_system_prompt=use_server_side_system_prompt,
-                )
-
-                async for chunk in generator:
+                async for chunk in dispatch_result:
                     # Handle metadata dict from dispatcher's _stream_with_meta
+                    tool_calls = None
                     if isinstance(chunk, dict):
                         if chunk.get("type") == "meta":
                             actual_provider = chunk["provider"]
@@ -153,7 +176,15 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
                             continue
                         if chunk.get("type") == "content":
                             chunk = chunk["data"]
+                        elif "tool_calls" in chunk:
+                            tool_calls = chunk["tool_calls"]
+                            saw_tool_calls = True
+                            chunk = ""
 
+                    generated.append(str(chunk))
+                    delta = {"content": chunk}
+                    if tool_calls is not None:
+                        delta["tool_calls"] = tool_calls
                     data = {
                         "id": chat_id,
                         "object": "chat.completion.chunk",
@@ -163,24 +194,51 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
                         "choices": [
                             {
                                 "index": 0,
-                                "delta": {"content": chunk},
+                                "delta": delta,
                                 "finish_reason": None,
                             }
                         ],
                     }
                     yield f"data: {json.dumps(data)}\n\n"
 
+                if saw_tool_calls:
+                    finish_chunk = {
+                        "id": chat_id,
+                        "object": "chat.completion.chunk",
+                        "created": created,
+                        "model": actual_model,
+                        "provider": actual_provider,
+                        "choices": [
+                            {"index": 0, "delta": {}, "finish_reason": "tool_calls"}
+                        ],
+                    }
+                    yield f"data: {json.dumps(finish_chunk)}\n\n"
+
+                # OpenAI-compatible final chunk carrying estimated usage.
+                selector = get_selector(request)
+                prompt_tokens = selector.estimate_tokens(
+                    chat_request.get_user_prompt()
+                )
+                completion_tokens = selector.estimate_tokens("".join(generated))
+                usage_chunk = {
+                    "id": chat_id,
+                    "object": "chat.completion.chunk",
+                    "created": created,
+                    "model": actual_model,
+                    "provider": actual_provider,
+                    "choices": [],
+                    "usage": {
+                        "prompt_tokens": prompt_tokens,
+                        "completion_tokens": completion_tokens,
+                        "total_tokens": prompt_tokens + completion_tokens,
+                    },
+                }
+                yield f"data: {json.dumps(usage_chunk)}\n\n"
                 yield "data: [DONE]\n\n"
 
             except Exception as e:
                 logger.error(f"Streaming error: {e}\n{traceback.format_exc()}")
                 error_data = {
-                    "id": chat_id,
-                    "object": "chat.completion.chunk",
-                    "created": created,
-                    "model": chat_request.model,
-                    "provider": actual_provider,
-                    "choices": [{"index": 0, "delta": {}, "finish_reason": "error"}],
                     "error": {"message": str(e), "type": "streaming_error"},
                 }
                 yield f"data: {json.dumps(error_data)}\n\n"
@@ -190,7 +248,9 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
 
     except Exception as ex:
         logger.error(f"chat_completions error: {ex}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Error: {ex}")
+        return _error_response(
+            ErrorDetail(message=f"Error: {ex}", type="server_error"), status_code=500
+        )
 
 
 @api_router.get("/v1/models")
@@ -210,6 +270,20 @@ async def list_models_openai(
     available underlying provider models.
     """
     try:
+        if request.headers.get("anthropic-version"):
+            # Claude Code discovers models through this endpoint; project the
+            # configured tier aliases instead of the OpenAI catalog.
+            aliases = [
+                {
+                    "id": alias,
+                    "display_name": alias,
+                    "type": "model",
+                    "created_at": "1970-01-01T00:00:00Z",
+                }
+                for alias in settings.CLAUDE_MODEL_MAP
+            ]
+            return JSONResponse(content={"data": aliases}, status_code=200)
+
         selector = get_selector(request)
         available = selector.get_available_models(model_type=type, model_scale=scale)
 

@@ -209,19 +209,32 @@ class TestChatCompletionRequestAcceptsStructuredContent(unittest.TestCase):
 
 
 class TestChatMessageValidation(unittest.TestCase):
-    """Invalid roles and content types are still rejected."""
+    """Valid tool-loop messages are accepted; invalid roles/types are not."""
 
     def test_invalid_role_rejected(self):
         with self.assertRaises(ValidationError):
-            ChatMessage(role="tool", content="x")
+            ChatMessage(role="function", content="x")
 
     def test_non_string_non_list_content_rejected(self):
         with self.assertRaises(ValidationError):
             ChatMessage(role="user", content=123)
 
-    def test_none_content_rejected(self):
-        with self.assertRaises(ValidationError):
-            ChatMessage(role="user", content=None)
+    def test_tool_result_message_accepted(self):
+        msg = ChatMessage(role="tool", content="file contents", tool_call_id="call_1")
+        self.assertEqual(msg.tool_call_id, "call_1")
+
+    def test_assistant_tool_call_without_content_accepted(self):
+        msg = ChatMessage(
+            role="assistant",
+            content=None,
+            tool_calls=[{
+                "id": "call_1",
+                "type": "function",
+                "function": {"name": "read_file", "arguments": "{}"},
+            }],
+        )
+        self.assertEqual(msg.tool_calls[0].function.name, "read_file")
+        self.assertEqual(msg.get_text(), "")
 
 
 if __name__ == "__main__":
