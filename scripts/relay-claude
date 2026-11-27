@@ -4,8 +4,9 @@
 # Usage: ./scripts/relay-claude [claude args...]
 #
 # The gateway is started automatically if /health is not reachable. A fixed
-# token is read from RELAY_AUTH_TOKEN in the environment or in .env; otherwise
-# a random one is generated for this session.
+# token is read from RELAY_AUTH_TOKEN in the environment or in .env. An
+# explicitly empty value disables auth; if no value is configured at all, a
+# random token is generated for this session.
 
 set -euo pipefail
 
@@ -21,10 +22,18 @@ while IFS='=' read -r name _; do
     esac
 done < <(env)
 
-if [ -z "${RELAY_AUTH_TOKEN:-}" ] && [ -f .env ]; then
-    RELAY_AUTH_TOKEN="$(python -c 'from dotenv import dotenv_values; print(dotenv_values(".env").get("RELAY_AUTH_TOKEN", ""))' 2>/dev/null || true)"
+AUTH_TOKEN_CONFIGURED=0
+if [ -n "${RELAY_AUTH_TOKEN+x}" ]; then
+    AUTH_TOKEN_CONFIGURED=1
 fi
-if [ -z "${RELAY_AUTH_TOKEN:-}" ]; then
+if [ "$AUTH_TOKEN_CONFIGURED" -eq 0 ] && [ -f .env ]; then
+    ENV_TOKEN="$(python -c 'from dotenv import dotenv_values; v = dotenv_values(".env"); print("__RELAY_UNSET__" if "RELAY_AUTH_TOKEN" not in v else v["RELAY_AUTH_TOKEN"])' 2>/dev/null || true)"
+    if [ "$ENV_TOKEN" != "__RELAY_UNSET__" ]; then
+        RELAY_AUTH_TOKEN="$ENV_TOKEN"
+        AUTH_TOKEN_CONFIGURED=1
+    fi
+fi
+if [ "$AUTH_TOKEN_CONFIGURED" -eq 0 ]; then
     RELAY_AUTH_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
 fi
 export RELAY_AUTH_TOKEN
@@ -50,7 +59,12 @@ if ! curl -fsS "${BASE_URL}/health" >/dev/null 2>&1; then
 fi
 
 export ANTHROPIC_BASE_URL="${BASE_URL}"
-export ANTHROPIC_AUTH_TOKEN="${RELAY_AUTH_TOKEN}"
+# Claude Code requires a credential even when the gateway has auth disabled.
+if [ -n "${RELAY_AUTH_TOKEN}" ]; then
+    export ANTHROPIC_AUTH_TOKEN="${RELAY_AUTH_TOKEN}"
+else
+    export ANTHROPIC_AUTH_TOKEN="relay-free"
+fi
 export ANTHROPIC_MODEL="${CLAUDE_MODEL:-claude-sonnet-5-5}"
 
 export CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST=1

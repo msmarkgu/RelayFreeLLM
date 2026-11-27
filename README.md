@@ -97,7 +97,7 @@ The launcher reads `.env`, starts the gateway if needed (so step 3 is optional),
 <details>
 <summary><strong>Bearer token auth</strong> (recommended for agent use)</summary>
 
-Add `RELAY_AUTH_TOKEN=your-random-secret` to `.env` to require `Authorization: Bearer <token>` on all API/admin routes. `/` and `/health` stay public. The server binds to `127.0.0.1` and allows only localhost CORS origins.
+Add `RELAY_AUTH_TOKEN=your-random-secret` to `.env` to require `Authorization: Bearer <token>` on all API/admin routes. `/` and `/health` stay public. The server binds to `127.0.0.1` and allows only localhost CORS origins. Leave the value empty to disable the gate for local chat/admin use; `scripts/relay-claude` then sends a harmless placeholder credential to Claude Code.
 
 </details>
 
