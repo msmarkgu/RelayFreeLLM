@@ -35,6 +35,7 @@ class Settings:
         self.NVIDIA_APIKEY = ""
         self.SAMBANOVA_APIKEY = ""
         self.REQUESTY_APIKEY = ""
+        self.DREAMPROMPTING_APIKEY = ""
         self.CLOUDFLARE_API_TOKEN = ""
         self.CLOUDFLARE_ACCOUNT_ID = ""
         self.OLLAMA_BASE_URL = "http://localhost:11434"
@@ -241,6 +242,9 @@ class Settings:
         self.NVIDIA_APIKEY = os.getenv("NVIDIA_APIKEY", self.NVIDIA_APIKEY)
         self.SAMBANOVA_APIKEY = os.getenv("SAMBANOVA_APIKEY", self.SAMBANOVA_APIKEY)
         self.REQUESTY_APIKEY = os.getenv("REQUESTY_APIKEY", self.REQUESTY_APIKEY)
+        self.DREAMPROMPTING_APIKEY = os.getenv(
+            "DREAMPROMPTING_APIKEY", self.DREAMPROMPTING_APIKEY
+        )
         self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", self.OLLAMA_BASE_URL)
 
         # Server

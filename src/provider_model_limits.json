@@ -265,6 +265,61 @@
       ]
     },
     {
+      "name": "DreamPrompting",
+      "url": "https://dreamprompting.com/api-docs",
+      "enabled": true,
+      "models": [
+        {
+          "name": "auto",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 100,
+            "requests_per_hour": 5000,
+            "requests_per_day": 5000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": 500000
+          },
+          "Max_Context_Length": 32000,
+          "modality": "text"
+        },
+        {
+          "name": "groq/openai/gpt-oss-120b",
+          "type": "text",
+          "scale": "large",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 100,
+            "requests_per_hour": 5000,
+            "requests_per_day": 5000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": 500000
+          },
+          "Max_Context_Length": 32000,
+          "modality": "text"
+        },
+        {
+          "name": "google/gemini-3.1-flash-lite",
+          "type": "text",
+          "scale": "medium",
+          "limits": {
+            "requests_per_second": 1,
+            "requests_per_minute": 100,
+            "requests_per_hour": 5000,
+            "requests_per_day": 5000,
+            "tokens_per_minute": -1,
+            "tokens_per_hour": -1,
+            "tokens_per_day": 500000
+          },
+          "Max_Context_Length": 32000,
+          "modality": "text"
+        }
+      ]
+    },
+    {
       "name": "KiloGateway",
       "url": "https://kilo.ai/docs/gateway",
       "enabled": true,
