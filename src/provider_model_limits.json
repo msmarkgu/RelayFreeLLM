@@ -162,7 +162,7 @@
         {
           "name": "z-ai/glm-5.3-flash",
           "type": "text",
-          "scale": "large",
+          "scale": "medium",
           "limits": {
             "requests_per_second": 1,
             "requests_per_minute": 30,
